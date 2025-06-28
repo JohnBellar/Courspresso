@@ -11,3 +11,20 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+/* Make the entire page take full height */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* Use flexbox to push footer to bottom */
+#root {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Make the main app content expand */
+.main-content {
+  flex: 1;
+}

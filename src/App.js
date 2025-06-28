@@ -1,24 +1,78 @@
-import logo from './logo.svg';
-import './App.css';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Home from './pages/Home';
+import Register from './pages/Register';
+import Recommendations from './pages/Recommendations';
+import Navbar from './components/Navbar';
+import Feedback from './pages/Feedback';
+import Quiz from './pages/Quiz';
+import AdminDashboard from './pages/AdminDashboard';
+import SavedCourses from './pages/SavedCourses';
+import UserDashboard from './pages/UserDashboard';
+import Chatbot from './components/Chatbot';
+import DomainPage from "./pages/DomainPage";
+import Login from "./pages/Login";
+import Signup from './pages/Signup';
+import VerifyOtp from './pages/Verify-otp';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/protectedRoute';
+import Logout from './pages/logout';
+
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <AuthProvider>
+      <Router>
+        <div className="d-flex flex-column min-vh-100">
+          <Navbar />
+
+          <div className="main-content flex-grow-1">
+            <Routes>
+              <Route path="/" element={<Home />} />
+
+              <Route
+                path="/register"
+                element={
+                  <ProtectedRoute allowedRoles={["USER"]}>
+                    <Register />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route path="/recommendations" element={<Recommendations />} />
+              <Route path="/feedback" element={<Feedback />} />
+              <Route path="/quiz" element={<Quiz />} />
+
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute allowedRoles={["ADMIN"]}>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route path="/saved" element={<SavedCourses />} />
+              <Route path="/dashboard" element={<UserDashboard />} />
+              <Route path="/domain/:domainId" element={<DomainPage />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/verify-otp" element={<VerifyOtp />} />
+              <Route path="/unauthorized" element={<h2>❌ Unauthorized</h2>} />
+              <Route path="/logout" element={<Logout />} />
+            </Routes>
+          </div>
+
+          <footer className="bg-dark text-white text-center py-3">
+            <p className="mb-0">
+              © {new Date().getFullYear()} MOOC Course Recommender. All rights reserved.
+            </p>
+          </footer>
+        </div>
+      </Router>
+
+      <Chatbot />
+    </AuthProvider>
   );
 }
 

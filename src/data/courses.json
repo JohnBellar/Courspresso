@@ -1,0 +1,29 @@
+[
+  {
+    "id": 1,
+    "title": "Introduction to Machine Learning",
+    "platform": "Coursera",
+    "instructor": "Andrew Ng",
+    "rating": 4.8,
+    "duration": "6 weeks",
+    "link": "https://coursera.org/ml"
+  },
+  {
+    "id": 2,
+    "title": "Full Stack Web Development",
+    "platform": "edX",
+    "instructor": "Colt Steele",
+    "rating": 4.6,
+    "duration": "8 weeks",
+    "link": "https://edx.org/fswd"
+  },
+  {
+    "id": 3,
+    "title": "Python for Everybody",
+    "platform": "Udemy",
+    "instructor": "Dr. Chuck",
+    "rating": 4.7,
+    "duration": "4 weeks",
+    "link": "https://udemy.com/python"
+  }
+]

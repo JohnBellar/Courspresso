@@ -68,3 +68,16 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/d
 ### `npm run build` fails to minify
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+# 🌐 MOOC Recommender Platform
+
+## 📁 Structure
+- `/backend`: Spring Boot application (Java 17)
+- `/frontend`: React app (Node.js 18+)
+- MongoDB: Use MongoDB Atlas or local MongoDB
+
+## 🚀 Quick Start
+
+### 1. Backend
+```bash
+cd backend
+./mvnw spring-boot:run

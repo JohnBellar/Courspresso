@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-AuthPortalApplication<auth-portal>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.dhanesh.auth.portal.AuthPortalApplication",
+            "projectName": "auth-portal",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}

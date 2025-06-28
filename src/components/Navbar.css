@@ -1,0 +1,14 @@
+.navbar {
+  background: linear-gradient(90deg, #3a0ca3, #7209b7);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+}
+
+.navbar-brand {
+  font-family: 'Poppins', sans-serif;
+  font-size: 1.4rem;
+  letter-spacing: 0.5px;
+}
+
+.nav-link {
+  font-size: 1.1rem;
+}
