@@ -30,24 +30,22 @@ export default function Login() {
 
       login({ email: userEmail }, role);
 
-      if (role.toUpperCase() === "ADMIN") {
-        navigate("/admin");
-      } else {
-        try {
-          const profileRes = await axios.get("/student/dashboard");
-          if (profileRes?.data?.fullName) {
-            navigate("/user-dashboard");
-          } else {
-            navigate("/register");
-          }
-        } catch (err) {
-          if (err.response?.status === 403) {
-            navigate("/register");
-          } else {
-            throw err;
-          }
-        }
-      }
+     if (role.toUpperCase() === "ADMIN") {
+  navigate("/admin");
+} else {
+  try {
+    const profileRes = await axios.get("/student/dashboard");
+    if (profileRes?.data?.fullName) {
+      navigate("/user-dashboard");
+    } else {
+      navigate("/register");
+    }
+  } catch (err) {
+    console.warn("Profile check failed:", err);
+    // Don't throw again — just assume incomplete
+    navigate("/register");
+  }
+}
     } catch (err) {
       console.error("Login error:", err);
       const msg = err.response?.data?.message || "Invalid credentials";
@@ -99,17 +97,6 @@ export default function Login() {
               onChange={(e) => setPassword(e.target.value)}
               required
             />
-          </Form.Group>
-
-          <Form.Group className="mb-3">
-            <Form.Label>Login as</Form.Label>
-            <Form.Select
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-            >
-              <option value="user">User</option>
-              <option value="admin">Administrator</option>
-            </Form.Select>
           </Form.Group>
 
           <Button variant="primary" type="submit" className="w-100">

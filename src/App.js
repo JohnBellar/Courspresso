@@ -18,7 +18,6 @@ import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/protectedRoute';
 import Logout from './pages/logout';
 
-
 function App() {
   return (
     <AuthProvider>
@@ -28,6 +27,7 @@ function App() {
 
           <div className="main-content flex-grow-1">
             <Routes>
+              {/* Public route - accessible by anyone */}
               <Route path="/" element={<Home />} />
 
               <Route
@@ -52,8 +52,16 @@ function App() {
                 }
               />
 
+              <Route
+                path="/user-dashboard"
+                element={
+                  <ProtectedRoute allowedRoles={["USER"]}>
+                    <UserDashboard />
+                  </ProtectedRoute>
+                }
+              />
+
               <Route path="/saved" element={<SavedCourses />} />
-              <Route path="/dashboard" element={<UserDashboard />} />
               <Route path="/domain/:domainId" element={<DomainPage />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />

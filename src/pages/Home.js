@@ -1,3 +1,4 @@
+// src/pages/Home.js
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "../utils/axiosConfig";
@@ -14,15 +15,22 @@ export default function Home() {
     fetchQuizzes();
   }, []);
 
-  const fetchCourses = async () => {
-    try {
-      const res = await axios.get("/admin/courses?page=0&size=10");
-      setCourses(Array.isArray(res.data) ? res.data : res.data.content || []);
-    } catch (err) {
-      console.error("Failed to load courses:", err);
-      setError("Unable to fetch courses.");
-    }
-  };
+const fetchCourses = async () => {
+  try {
+    const res = await axios.get("http://localhost:8080/courses");
+    const data = Array.isArray(res.data)
+      ? res.data
+      : res.data.content || [];
+
+    setCourses(data);
+  } catch (err) {
+    console.error("Failed to load courses:", err);
+    setError("Unable to fetch courses.");
+  }
+};
+
+
+
 
   const fetchQuizzes = async () => {
     try {
@@ -33,14 +41,19 @@ export default function Home() {
     }
   };
 
-  const handleSearch = async () => {
-    try {
-      const res = await axios.get(`/courses/search?q=${searchQuery}`);
-      setCourses(Array.isArray(res.data) ? res.data : res.data.content || []);
-    } catch (err) {
-      setError("Search failed. Try again.");
-    }
-  };
+ const handleSearch = async () => {
+  try {
+    const res = await axios.get(`http://localhost:8080/courses/search?q=${searchQuery}`);
+    const data = Array.isArray(res.data)
+      ? res.data
+      : res.data.content || [];
+
+    setCourses(data);
+  } catch (err) {
+    setError("Search failed. Try again.");
+  }
+};
+
 
   const saveCourse = async (courseId) => {
     try {

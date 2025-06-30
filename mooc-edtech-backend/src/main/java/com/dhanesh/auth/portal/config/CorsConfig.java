@@ -18,10 +18,10 @@ public class CorsConfig {
         config.setAllowedOrigins(List.of("http://localhost:3000")); // React frontend
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true); // Needed if using cookies/JWT
+        config.setAllowCredentials(true); // Important for cookies or JWT in headers
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config); // Apply to all routes
+        source.registerCorsConfiguration("/**", config);
 
         return source;
     }

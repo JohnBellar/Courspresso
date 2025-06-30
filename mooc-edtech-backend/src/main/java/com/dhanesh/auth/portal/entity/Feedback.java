@@ -1,6 +1,9 @@
 package com.dhanesh.auth.portal.entity;
 
 import lombok.*;
+
+import java.time.Instant;
+
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -23,7 +26,9 @@ public class Feedback {
 
     private Integer courseQualityRating;      // Nullable, required only if enrolled == true
 
-    private String feedback;        //long text 
+    String feedback;        //long text 
 
-    private String appExperience;    //Awseome, Good, Need Improvement 
+    String appExperience;    //Awseome, Good, Need Improvement 
+
+    Instant createdAt;         // Timestamp of feedback creation
 }

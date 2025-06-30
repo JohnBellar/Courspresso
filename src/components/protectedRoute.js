@@ -1,20 +1,22 @@
-// src/components/ProtectedRoute.js
 import React from "react";
 import { Navigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
-const ProtectedRoute = ({ children, allowedRoles }) => {
-  const token = localStorage.getItem("token");
-  const role = localStorage.getItem("role");
+export default function ProtectedRoute({ children, allowedRoles }) {
+  const { user, role } = useAuth();
 
-  if (!token) {
-    return <Navigate to="/login" />;
+  if (user === undefined || role === undefined) {
+    // Loading or not initialized
+    return null; // Or a loader if you want
   }
 
-  if (allowedRoles && !allowedRoles.includes(role?.toUpperCase())) {
-    return <Navigate to="/unauthorized" />;
+  if (!user || !role) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!allowedRoles.includes(role.toUpperCase())) {
+    return <Navigate to="/unauthorized" replace />;
   }
 
   return children;
-};
-
-export default ProtectedRoute;
+}

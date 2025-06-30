@@ -1,99 +1,128 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Container, Form, Button, Card, Alert } from "react-bootstrap";
 import axios from "../utils/axiosConfig";
-import { Card, Container, Row, Col, Spinner, Alert } from "react-bootstrap";
+import { useAuth } from "../context/AuthContext";
 
-export default function UserDashboard() {
-  const [profile, setProfile] = useState(null);
-  const [savedCourses, setSavedCourses] = useState([]);
-  const [loading, setLoading] = useState(true);
+export default function Login() {
+  const navigate = useNavigate();
+  const { login } = useAuth();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState("user");
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    fetchDashboard();
-  }, []);
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError("");
 
-  const fetchDashboard = async () => {
     try {
-      const userId = localStorage.getItem("userId");
-      if (!userId) throw new Error("User ID missing");
+      const res = await axios.post("/api/auth/signin", {
+        loginId: email,
+        password,
+      });
 
-      const [profileRes, savedRes] = await Promise.all([
-        axios.get("/student/dashboard"),
-        axios.get(`/saved-courses/${userId}`),
-      ]);
+      const { token, role, email: userEmail, userId } = res.data;
 
-      setProfile(profileRes.data);
-      setSavedCourses(savedRes.data);
+      localStorage.setItem("token", token);
+      localStorage.setItem("role", role);
+      localStorage.setItem("userId", userId);
+      localStorage.setItem("email", userEmail);
+
+      login({ email: userEmail }, role);
+
+      if (role.toUpperCase() === "ADMIN") {
+        navigate("/admin");
+      } else {
+        try {
+          const profileRes = await axios.get("/student/dashboard");
+          if (profileRes?.data?.fullName) {
+            navigate("/user-dashboard");
+          } else {
+            navigate("/register");
+          }
+        } catch (err) {
+          if (err.response?.status === 403) {
+            navigate("/register");
+          } else {
+            throw err;
+          }
+        }
+      }
     } catch (err) {
-      setError("Failed to load user dashboard.");
-      console.error(err);
-    } finally {
-      setLoading(false);
+      console.error("Login error:", err);
+      const msg = err.response?.data?.message || "Invalid credentials";
+
+      if (msg.toLowerCase().includes("not verified")) {
+        alert("🔁 Email not verified. Sending OTP again...");
+
+        try {
+          await axios.post("/api/auth/request-otp", {
+            email,
+            purpose: "VERIFICATION"
+          });
+
+          navigate("/verify-otp", { state: { email } });
+        } catch (otpErr) {
+          console.error("Failed to resend OTP:", otpErr);
+          setError("Failed to resend OTP. Please try again.");
+        }
+
+      } else {
+        setError(msg);
+      }
     }
   };
 
-  if (loading) {
-    return (
-      <Container className="my-5 text-center">
-        <Spinner animation="border" variant="primary" />
-      </Container>
-    );
-  }
-
-  if (error) {
-    return (
-      <Container className="my-5">
-        <Alert variant="danger">{error}</Alert>
-      </Container>
-    );
-  }
-
   return (
     <Container className="my-5">
-      <h2 className="mb-4">👤 User Dashboard</h2>
+      <Card className="p-4 shadow-sm mx-auto" style={{ maxWidth: "500px" }}>
+        <h3 className="text-center mb-4">🔐 Login</h3>
+        {error && <Alert variant="danger">{error}</Alert>}
+        <Form onSubmit={handleLogin}>
+          <Form.Group className="mb-3">
+            <Form.Label>Email</Form.Label>
+            <Form.Control
+              type="email"
+              placeholder="Enter email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </Form.Group>
 
-      <Row>
-        <Col md={6}>
-          <Card className="mb-4 shadow-sm">
-            <Card.Header>📋 Profile Information</Card.Header>
-            <Card.Body>
-              <p><strong>Full Name:</strong> {profile?.fullName}</p>
-              <p><strong>Email:</strong> {profile?.email}</p>
-              <p><strong>Phone:</strong> {profile?.phoneNumber}</p>
-              <p><strong>Education Level:</strong> {profile?.educationLevel}</p>
-              <p><strong>Preferred Platform:</strong> {profile?.preferredPlatform}</p>
-              <p><strong>Primary Interests:</strong> {profile?.primaryInterests?.join(", ")}</p>
-              <p><strong>Learning Goals:</strong> {profile?.learningGoals}</p>
-              <p><strong>Difficulty:</strong> {profile?.preferredDifficulty}</p>
-              <p><strong>Hobbies:</strong> {profile?.hobbies}</p>
-            </Card.Body>
-          </Card>
-        </Col>
+          <Form.Group className="mb-3">
+            <Form.Label>Password</Form.Label>
+            <Form.Control
+              type="password"
+              placeholder="Enter password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </Form.Group>
 
-        <Col md={6}>
-          <Card className="mb-4 shadow-sm">
-            <Card.Header>📚 Saved Courses</Card.Header>
-            <Card.Body>
-              {savedCourses.length === 0 ? (
-                <p>No saved courses found.</p>
-              ) : (
-                savedCourses.map((c) => (
-                  <Card key={c.id} className="mb-3">
-                    <Card.Body>
-                      <h5>{c.title}</h5>
-                      <p>{c.description}</p>
-                      <a href={c.url} className="btn btn-sm btn-outline-primary" target="_blank" rel="noreferrer">
-                        Visit Course
-                      </a>
-                    </Card.Body>
-                  </Card>
-                ))
-              )}
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
+          <Form.Group className="mb-3">
+            <Form.Label>Login as</Form.Label>
+            <Form.Select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+            >
+              <option value="user">User</option>
+              <option value="admin">Administrator</option>
+            </Form.Select>
+          </Form.Group>
+
+          <Button variant="primary" type="submit" className="w-100">
+            Login
+          </Button>
+
+          <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+            <p>Don't have an account? <a href="/signup">Sign up here</a></p>
+          </div>
+        </Form>
+      </Card>
     </Container>
   );
 }
-

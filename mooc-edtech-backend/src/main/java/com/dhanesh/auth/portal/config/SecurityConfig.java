@@ -1,9 +1,9 @@
 package com.dhanesh.auth.portal.config;
 
+import org.springframework.security.config.Customizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
@@ -27,7 +27,7 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            // Enable default CORS settings (will use CorsConfigurationSource bean)
+            // Enable default CORS settings
             .cors(Customizer.withDefaults())
 
             // Disable CSRF since the app uses stateless JWT-based auth
@@ -39,35 +39,27 @@ public class SecurityConfig {
 
             // Authorization rules for different endpoint access
             .authorizeHttpRequests(auth -> auth
-                // 🔐 Allow preflight requests for CORS (this fixes your main issue)
-                .requestMatchers(HttpMethod.OPTIONS, "/").permitAll()
-
-                // Publicly accessible endpoints
                 .requestMatchers(
-                    "/",
-                    "/api/auth/signup",
-                    "/api/auth/signin",
-                    "/api/auth/request-otp",
-                    "/api/auth/verify-otp",
-                    "/api/auth/forgot-password",
-                    "/api/auth/reset-password",
-                    "/users/all" 
-                ).permitAll()
-
-                // Admin-only endpoints
-                .requestMatchers("/admin/").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.POST, "/courses").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PUT, "/courses/").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.DELETE, "/courses/").hasRole("ADMIN")
-
-                // All other endpoints require authentication
-                .anyRequest().authenticated()
+                    "/", 
+                    "/api/auth/signup", 
+                    "/api/auth/signin", 
+                    "/api/auth/request-otp", 
+                    "/api/auth/verify-otp", 
+                    "/api/auth/forgot-password", 
+                    "/api/auth/reset-password"
+                ).permitAll() // public endpoints
+                
+                .requestMatchers(HttpMethod.GET, "/courses")
+                .permitAll()
+                
+                .requestMatchers("/admin/**").hasRole("ADMIN") // role-based access
+                .anyRequest().authenticated() // all other requests require authentication
             )
 
-            // Attach custom authentication provider
+            // Attach the custom AuthenticationProvider
             .authenticationProvider(authenticationProvider)
 
-            // Add custom JWT filter before the default UsernamePasswordAuthenticationFilter
+            // Add custom JWT filter before the UsernamePasswordAuthenticationFilter
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
