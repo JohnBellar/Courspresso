@@ -7,6 +7,9 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [error, setError] = useState("");
   const [form, setForm] = useState({ title: "", description: "", imageUrl: "", url: "", platform: "", tutor: "" });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [users, setUsers] = useState([]);
+  const [userSearch, setUserSearch] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -16,11 +19,12 @@ export default function AdminDashboard() {
     }
     loadCourses();
     loadStats();
+    loadUsers();
   }, []);
 
   const loadCourses = async () => {
     try {
-      const res = await axios.get("/courses?page=0&size=22");
+      const res = await axios.get("/courses?page=0&size=20");
       setCourses(Array.isArray(res.data) ? res.data : res.data.content || []);
     } catch (e) {
       setError("403 - Admin access required. Please login as admin.");
@@ -39,7 +43,7 @@ export default function AdminDashboard() {
   const deleteCourse = async (id) => {
     try {
       await axios.delete(`/admin/courses/${id}`);
-      loadCourses();
+      handleSearch("", true); // reload all
     } catch (e) {
       console.error(e);
     }
@@ -54,6 +58,44 @@ export default function AdminDashboard() {
       console.error(e);
     }
   };
+
+  const handleSearch = async (query = searchQuery, isReset = false) => {
+    try {
+      if (!query.trim()) {
+        loadCourses();
+        return;
+      }
+      const res = await axios.get(`/courses/search?q=${query}&page=0&size=10`);
+      const data = Array.isArray(res.data) ? res.data : res.data.content || [];
+      setCourses(data);
+    } catch (err) {
+      setError("Search failed.");
+    }
+  };
+
+  const loadUsers = async () => {
+    try {
+      const res = await axios.get("/admin/users");
+      const filtered = res.data.filter(u => u.username !== "mrD" && u.role !== "ADMIN");
+      setUsers(filtered);
+    } catch (e) {
+      console.error("User fetch error", e);
+    }
+  };
+
+  const handleUserDelete = async (username) => {
+    try {
+      await axios.delete(`/admin/users?username=${username}`);
+      loadUsers();
+    } catch (err) {
+      alert("Failed to delete user");
+    }
+  };
+
+  const filteredUsers = users.filter(u =>
+    u.username.toLowerCase().includes(userSearch.toLowerCase()) ||
+    u.email.toLowerCase().includes(userSearch.toLowerCase())
+  );
 
   const coffeeStyles = {
     backgroundColor: "#f8f1e7",
@@ -104,7 +146,21 @@ export default function AdminDashboard() {
       </div>
 
       <h4 style={headingStyle}>Manage Courses</h4>
-      <ul className="list-group">
+      <div className="input-group mb-3">
+        <input
+          type="text"
+          className="form-control"
+          placeholder="Search courses..."
+          value={searchQuery}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            if (!e.target.value.trim()) handleSearch("", true);
+          }}
+        />
+        <button className="btn btn-outline-dark" onClick={() => handleSearch()}>Search</button>
+      </div>
+
+      <ul className="list-group mb-4">
         {courses.length === 0 ? (
           <p>No courses available.</p>
         ) : (
@@ -112,6 +168,29 @@ export default function AdminDashboard() {
             <li key={course.id} className="list-group-item d-flex justify-content-between align-items-center" style={{ backgroundColor: "#fffdf7" }}>
               <span>{course.title}</span>
               <button className="btn btn-danger btn-sm" onClick={() => deleteCourse(course.id)}>Delete</button>
+            </li>
+          ))
+        )}
+      </ul>
+
+      <h4 style={headingStyle}>Manage Users</h4>
+      <div className="input-group mb-3">
+        <input
+          type="text"
+          className="form-control"
+          placeholder="Search users..."
+          value={userSearch}
+          onChange={(e) => setUserSearch(e.target.value)}
+        />
+      </div>
+      <ul className="list-group">
+        {filteredUsers.length === 0 ? (
+          <p>No users found.</p>
+        ) : (
+          filteredUsers.map((user) => (
+            <li key={user.username} className="list-group-item d-flex justify-content-between align-items-center">
+              <span>{user.username} ({user.email})</span>
+              <button className="btn btn-danger btn-sm" onClick={() => handleUserDelete(user.username)}>Delete</button>
             </li>
           ))
         )}
