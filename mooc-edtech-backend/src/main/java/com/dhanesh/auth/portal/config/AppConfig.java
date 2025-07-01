@@ -9,41 +9,43 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+
+import com.dhanesh.auth.portal.repository.UserRepository;
 import com.dhanesh.auth.portal.security.jwt.JwtAuthenticationFilter;
 import com.dhanesh.auth.portal.security.jwt.JwtService;
+
 import lombok.RequiredArgsConstructor;
+
 @Configuration
 @RequiredArgsConstructor
 public class AppConfig {
-    
+
     private final UserDetailsService userDetailsService;
     private final JwtService jwtService;
+    private final UserRepository userRepository; // ✅ Injected here
 
     /**
      * Bean for password encoding using BCrypt algorithm.
-     * Ensures passwords are stored securely in the database.
      */
-    @Bean 
+    @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
     /**
-     * DAO-based AuthenticationProvider that uses the custom UserDetailsService
-     * and the defined PasswordEncoder for authentication logic.
+     * DAO-based AuthenticationProvider.
      */
-    @Bean 
-    @SuppressWarnings("deprecation") // To avoid warning for DaoAuthenticationProvider (safe to suppress here)
+    @Bean
+    @SuppressWarnings("deprecation")
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setPasswordEncoder(passwordEncoder());
         provider.setUserDetailsService(userDetailsService);
+        provider.setPasswordEncoder(passwordEncoder());
         return provider;
-    } 
+    }
 
     /**
-     * AuthenticationManager bean provided via AuthenticationConfiguration.
-     * Required for programmatic authentication (e.g., during login).
+     * AuthenticationManager bean from config.
      */
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
@@ -51,12 +53,10 @@ public class AppConfig {
     }
 
     /**
-     * JWT filter that intercepts requests and performs token validation.
-     * Added to the security filter chain for request-based security.
+     * JWT Authentication Filter Bean.
      */
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
-        return new JwtAuthenticationFilter(jwtService, userDetailsService);
-    } 
+        return new JwtAuthenticationFilter(jwtService, userDetailsService); // ✅ Fixed
+    }
 }
-

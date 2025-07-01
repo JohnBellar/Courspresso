@@ -1,41 +1,44 @@
-import { createContext, useContext, useEffect, useState } from "react";
+  import React, { createContext, useContext, useState, useEffect } from "react";
+  import { isTokenExpired } from "../utils/checkToken"; // ✅ make sure this is valid
 
-const AuthContext = createContext();
+  const AuthContext = createContext();
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(undefined); // undefined = loading, null = not logged in
-  const [role, setRole] = useState(undefined);
+  export const useAuth = () => useContext(AuthContext);
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    const email = localStorage.getItem("email");
-    const savedRole = localStorage.getItem("role");
+  export function AuthProvider({ children }) {
+    const [user, setUser] = useState(null);
+    const [role, setRole] = useState(null);
 
-    if (token && email && savedRole) {
-      setUser({ email });
-      setRole(savedRole);
-    } else {
+    useEffect(() => {
+      const token = localStorage.getItem("token");
+      const userEmail = localStorage.getItem("email");
+      const savedRole = localStorage.getItem("role");
+
+      // ✅ Check if token exists and is not expired
+      if (token && userEmail && savedRole && !isTokenExpired()) {
+        setUser({ email: userEmail });
+        setRole(savedRole);
+      } else {
+        localStorage.clear();
+      }
+    }, []);
+
+    const login = (userData, role) => {
+      localStorage.setItem("userId", userData.userId);
+      setUser(userData);
+      setRole(role);
+      localStorage.setItem("email", userData.email);
+    };
+
+    const logout = () => {
       setUser(null);
       setRole(null);
-    }
-  }, []);
+      localStorage.clear(); // clears token, userId, role etc
+    };
 
-  const login = (userData, userRole) => {
-    setUser(userData);
-    setRole(userRole);
-  };
-
-  const logout = () => {
-    localStorage.clear();
-    setUser(null);
-    setRole(null);
-  };
-
-  return (
-    <AuthContext.Provider value={{ user, role, login, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
-
-export const useAuth = () => useContext(AuthContext);
+    return (
+      <AuthContext.Provider value={{ user, role, login, logout }}>
+        {children}
+      </AuthContext.Provider>
+    );
+  }

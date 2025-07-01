@@ -20,7 +20,7 @@ export default function AdminDashboard() {
 
   const loadCourses = async () => {
     try {
-      const res = await axios.get("/admin/courses?page=0&size=10");
+      const res = await axios.get("/courses?page=0&size=22");
       setCourses(Array.isArray(res.data) ? res.data : res.data.content || []);
     } catch (e) {
       setError("403 - Admin access required. Please login as admin.");
@@ -55,14 +55,33 @@ export default function AdminDashboard() {
     }
   };
 
+  const coffeeStyles = {
+    backgroundColor: "#f8f1e7",
+    color: "#4b3621",
+    fontFamily: "Georgia, serif",
+    padding: "2rem",
+    borderRadius: "8px",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+  };
+
+  const inputStyle = {
+    backgroundColor: "#fff8f2",
+    border: "1px solid #d9c4a3",
+    color: "#4b3621",
+  };
+
+  const headingStyle = {
+    color: "#6f4e37",
+  };
+
   return (
-    <div className="container">
-      <h2>Admin Dashboard</h2>
+    <div className="container mt-4" style={coffeeStyles}>
+      <h2 style={headingStyle}>Admin Dashboard</h2>
       {error && <p className="text-danger">{error}</p>}
 
       {stats && (
         <div className="mb-4">
-          <h5>Summary</h5>
+          <h5 style={headingStyle}>Summary</h5>
           <ul>
             <li>Admin Email: {stats.adminEmail}</li>
             <li>Total Users: {stats.totalUsers}</li>
@@ -74,23 +93,23 @@ export default function AdminDashboard() {
       )}
 
       <div className="mb-4">
-        <h5>Add New Course</h5>
-        <input className="form-control mb-2" placeholder="Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-        <input className="form-control mb-2" placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-        <input className="form-control mb-2" placeholder="Platform" value={form.platform} onChange={(e) => setForm({ ...form, platform: e.target.value })} />
-        <input className="form-control mb-2" placeholder="Tutor" value={form.tutor} onChange={(e) => setForm({ ...form, tutor: e.target.value })} />
-        <input className="form-control mb-2" placeholder="Image URL" value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} />
-        <input className="form-control mb-2" placeholder="Course URL" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} />
+        <h5 style={headingStyle}>Add New Course</h5>
+        <input className="form-control mb-2" placeholder="Title" style={inputStyle} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+        <input className="form-control mb-2" placeholder="Description" style={inputStyle} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+        <input className="form-control mb-2" placeholder="Platform" style={inputStyle} value={form.platform} onChange={(e) => setForm({ ...form, platform: e.target.value })} />
+        <input className="form-control mb-2" placeholder="Tutor" style={inputStyle} value={form.tutor} onChange={(e) => setForm({ ...form, tutor: e.target.value })} />
+        <input className="form-control mb-2" placeholder="Image URL" style={inputStyle} value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} />
+        <input className="form-control mb-2" placeholder="Course URL" style={inputStyle} value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} />
         <button className="btn btn-success" onClick={addCourse}>Add Course</button>
       </div>
 
-      <h4>Manage Courses</h4>
-      <ul>
+      <h4 style={headingStyle}>Manage Courses</h4>
+      <ul className="list-group">
         {courses.length === 0 ? (
           <p>No courses available.</p>
         ) : (
           courses.map((course) => (
-            <li key={course.id} className="d-flex justify-content-between align-items-center">
+            <li key={course.id} className="list-group-item d-flex justify-content-between align-items-center" style={{ backgroundColor: "#fffdf7" }}>
               <span>{course.title}</span>
               <button className="btn btn-danger btn-sm" onClick={() => deleteCourse(course.id)}>Delete</button>
             </li>

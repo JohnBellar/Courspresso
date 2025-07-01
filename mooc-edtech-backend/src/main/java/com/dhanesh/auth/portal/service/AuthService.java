@@ -45,14 +45,16 @@ public class AuthService {
         validateUserUniqueness(username, email);
 
         // Create and persist new user
-        Users user = new Users();
-        user.setUsername(username);
-        user.setEmail(email);
-        user.setPassword(passwordEncoder.encode(password));
-        user.setRole("USER");
-        user.setVerified(false);
-        user.setAuthProvider(AuthProvider.LOCAL);
 
+        Users user = Users.builder()
+            .username(username)
+            .email(email)
+            .password(passwordEncoder.encode(password))
+            .role("USER")
+            .verified(false)
+            .authProvider(AuthProvider.LOCAL)
+            .build();
+      
         userRepo.save(user);
 
         // Send OTP for verification
@@ -104,6 +106,7 @@ public class AuthService {
         String token = jwtService.generateToken(user);
 
         return new SigninResponse(
+            user.getId(),
             request.loginId(),
             user.getRole(),
             token,

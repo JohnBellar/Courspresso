@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Container, Form, Button, Card, Alert } from "react-bootstrap";
 import axios from "../utils/axiosConfig";
 import { useAuth } from "../context/AuthContext";
+import bgLogin from "../assets/coffee-login-bg.png";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -12,73 +13,106 @@ export default function Login() {
   const [role, setRole] = useState("user");
   const [error, setError] = useState("");
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setError("");
+ const handleLogin = async (e) => {
+  e.preventDefault();
+  setError("");
 
-    try {
-      const res = await axios.post("/api/auth/signin", {
-        loginId: email,
-        password,
-      });
-
-      const { token, role, email: userEmail, userId } = res.data;
-
-      localStorage.setItem("token", token);
-      localStorage.setItem("role", role);
-      localStorage.setItem("userId", userId);
-
-      login({ email: userEmail }, role);
-
-     if (role.toUpperCase() === "ADMIN") {
-  navigate("/admin");
-} else {
   try {
-    const profileRes = await axios.get("/student/dashboard");
-    if (profileRes?.data?.fullName) {
-      navigate("/user-dashboard");
+    const res = await axios.post("/api/auth/signin", {
+      loginId: email,
+      password,
+    });
+
+    const { token, role, email: userEmail, userId } = res.data;
+    console.log("🟢 Login response:", res.data);
+
+    localStorage.setItem("token", token);
+    localStorage.setItem("role", role);
+    localStorage.setItem("userId", userId);
+    localStorage.setItem("email", userEmail);
+
+    login({ email: userEmail, userId }, role);
+
+    if (role.toUpperCase() === "ADMIN") {
+      navigate("/admin");
     } else {
-      navigate("/register");
-    }
-  } catch (err) {
-    console.warn("Profile check failed:", err);
-    // Don't throw again — just assume incomplete
-    navigate("/register");
-  }
-}
-    } catch (err) {
-      console.error("Login error:", err);
-      const msg = err.response?.data?.message || "Invalid credentials";
-
-      if (msg.toLowerCase().includes("not verified")) {
-        alert("🔁 Email not verified. Sending OTP again...");
-
-        try {
-          await axios.post("/api/auth/request-otp", {
-            email,
-            purpose: "VERIFICATION"
-          });
-
-          navigate("/verify-otp", { state: { email } });
-        } catch (otpErr) {
-          console.error("Failed to resend OTP:", otpErr);
-          setError("Failed to resend OTP. Please try again.");
+      try {
+        const profileStatusRes = await axios.get(`/profile/${userId}/status`);
+        if (profileStatusRes.data === true) {
+          navigate("/user-dashboard");
+        } else {
+          navigate("/register");
         }
-
-      } else {
-        setError(msg);
+      } catch (err) {
+        console.warn("Profile check failed:", err);
+        navigate("/register");
       }
     }
+  } catch (err) {
+    console.error("Login error:", err);
+    const msg = err.response?.data?.message || "Invalid credentials";
+
+    if (msg.toLowerCase().includes("not verified")) {
+      alert("🔁 Email not verified. Sending OTP again...");
+      try {
+        await axios.post("/api/auth/request-otp", {
+          email,
+          purpose: "VERIFICATION",
+        });
+        navigate("/verify-otp", { state: { email } });
+      } catch (otpErr) {
+        console.error("Failed to resend OTP:", otpErr);
+        setError("Failed to resend OTP. Please try again.");
+      }
+    } else {
+      setError(msg);
+    }
+  }
+};
+
+  // Coffee theme styles
+  const backgroundStyle = {
+    backgroundImage: `url(${bgLogin})`,
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+    minHeight: "100vh",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontFamily: "Georgia, serif",
+    color: "#4b3621",
+    padding: "2rem",
+  };
+
+  const cardStyle = {
+    backgroundColor: "#f8f1e7",
+    border: "none",
+    borderRadius: "12px",
+    boxShadow: "0 6px 18px rgba(0, 0, 0, 0.25)",
+    width: "100%",
+    maxWidth: "500px",
+  };
+
+  const labelStyle = {
+    color: "#6f4e37",
+    fontWeight: "bold",
+  };
+
+  const linkStyle = {
+    color: "#6f4e37",
+    textDecoration: "underline",
   };
 
   return (
-    <Container className="my-5">
-      <Card className="p-4 shadow-sm mx-auto" style={{ maxWidth: "500px" }}>
-        <h3 className="text-center mb-4">🔐 Login</h3>
+    <div style={backgroundStyle}>
+      <Card className="p-4" style={cardStyle}>
+        <h3 className="text-center mb-4" style={{ color: "#6f4e37" }}>
+          🔐 Login
+        </h3>
         {error && <Alert variant="danger">{error}</Alert>}
         <Form onSubmit={handleLogin}>
           <Form.Group className="mb-3">
-            <Form.Label>Email</Form.Label>
+            <Form.Label style={labelStyle}>Email</Form.Label>
             <Form.Control
               type="email"
               placeholder="Enter email"
@@ -89,7 +123,7 @@ export default function Login() {
           </Form.Group>
 
           <Form.Group className="mb-3">
-            <Form.Label>Password</Form.Label>
+            <Form.Label style={labelStyle}>Password</Form.Label>
             <Form.Control
               type="password"
               placeholder="Enter password"
@@ -99,15 +133,25 @@ export default function Login() {
             />
           </Form.Group>
 
-          <Button variant="primary" type="submit" className="w-100">
+          <Button
+            variant="dark"
+            type="submit"
+            className="w-100"
+            style={{ backgroundColor: "#6f4e37", border: "none" }}
+          >
             Login
           </Button>
 
-          <div style={{ marginTop: '1rem', textAlign: 'center' }}>
-            <p>Don't have an account? <a href="/signup">Sign up here</a></p>
+          <div style={{ marginTop: "1rem", textAlign: "center" }}>
+            <p>
+              Don&apos;t have an account?{" "}
+              <a href="/signup" style={linkStyle}>
+                Sign up here
+              </a>
+            </p>
           </div>
         </Form>
       </Card>
-    </Container>
+    </div>
   );
 }

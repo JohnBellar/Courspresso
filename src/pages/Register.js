@@ -37,8 +37,15 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     try {
-      const email = localStorage.getItem("email"); // Use stored email
+      const email = localStorage.getItem("email");
+      const userId = localStorage.getItem("userId");
+
+      if (!userId) {
+        alert("User ID is missing. Please login again.");
+        return;
+      }
 
       const payload = {
         fullName: formData.fullName,
@@ -54,9 +61,9 @@ export default function Register() {
         hobbies: formData.hobbies.split(",").map((s) => s.trim()),
       };
 
-      console.log("🚀 Sending payload:", payload);
+      console.log("🚀 Sending profile to backend:", payload);
 
-      await axios.post("/student/register", payload);
+      await axios.post(`/profile/${userId}`, payload);
 
       alert("✅ Registration submitted successfully!");
       navigate("/user-dashboard");
@@ -70,8 +77,20 @@ export default function Register() {
   };
 
   return (
-    <Container className="register-container my-5">
-      <h2 className="text-center mb-3">Student Registration</h2>
+    <Container
+      className="register-container my-5"
+      style={{
+        backgroundColor: "#f8f1e7",
+        borderRadius: "12px",
+        padding: "2rem",
+        fontFamily: "Georgia, serif",
+        color: "#4b3621",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+      }}
+    >
+      <h2 className="text-center mb-3" style={{ color: "#6f4e37" }}>
+        Student Registration
+      </h2>
       <p className="text-muted fst-italic mb-4">
         Fields marked with <span className="text-danger">*</span> are mandatory.
       </p>
@@ -88,6 +107,7 @@ export default function Register() {
                 value={formData.fullName}
                 onChange={handleChange}
                 required
+                style={{ borderColor: "#6f4e37" }}
               />
             </Form.Group>
 
@@ -98,6 +118,7 @@ export default function Register() {
                 name="phoneNumber"
                 value={formData.phoneNumber}
                 onChange={handleChange}
+                style={{ borderColor: "#6f4e37" }}
               />
             </Form.Group>
 
@@ -110,6 +131,7 @@ export default function Register() {
                 value={formData.educationLevel}
                 onChange={handleChange}
                 required
+                style={{ borderColor: "#6f4e37" }}
               >
                 <option value="">-- Select --</option>
                 <option value="School">School</option>
@@ -125,6 +147,7 @@ export default function Register() {
                 name="preferredPlatform"
                 value={formData.preferredPlatform}
                 onChange={handleChange}
+                style={{ borderColor: "#6f4e37" }}
               >
                 <option value="">-- Choose Platform --</option>
                 <option value="Coursera">Coursera</option>
@@ -144,6 +167,7 @@ export default function Register() {
                 value={formData.primaryInterests}
                 onChange={handleChange}
                 placeholder="e.g. AI, Web Development"
+                style={{ borderColor: "#6f4e37" }}
               />
             </Form.Group>
 
@@ -155,6 +179,7 @@ export default function Register() {
                 name="learningGoals"
                 value={formData.learningGoals}
                 onChange={handleChange}
+                style={{ borderColor: "#6f4e37" }}
               />
             </Form.Group>
 
@@ -164,6 +189,7 @@ export default function Register() {
                 name="preferredDifficultyLevel"
                 value={formData.preferredDifficultyLevel}
                 onChange={handleChange}
+                style={{ borderColor: "#6f4e37" }}
               >
                 <option value="">-- Choose --</option>
                 <option value="Beginner">Beginner</option>
@@ -180,13 +206,14 @@ export default function Register() {
                 value={formData.hobbies}
                 onChange={handleChange}
                 placeholder="e.g. Reading, Music, Gaming"
+                style={{ borderColor: "#6f4e37" }}
               />
             </Form.Group>
           </Col>
         </Row>
 
         <div className="text-center">
-          <Button type="submit" variant="primary">
+          <Button type="submit" variant="dark">
             Submit
           </Button>
         </div>

@@ -24,15 +24,14 @@ export default function Recommendations() {
         }
 
         const payload = {
-           tags: [quizData.interest],
-           platforms: [quizData.preferredPlatform],
-           difficulty: quizData.difficulty.toUpperCase(),
-           duration: mapCourseLengthToEnum(quizData.courseLength),
-      };
+          tags: [quizData.interest],
+          platforms: [quizData.preferredPlatform],
+          difficulty: quizData.difficulty.toUpperCase(),
+          duration: mapCourseLengthToEnum(quizData.courseLength),
+        };
 
-const response = await axios.post("/courses/filter", payload); 
-setCourses(response.data);
-
+        const response = await axios.post("/courses/filter", payload);
+        setCourses(response.data);
       } catch (err) {
         console.error("Failed to fetch courses:", err);
         alert("Failed to load course recommendations.");
@@ -59,7 +58,7 @@ setCourses(response.data);
   const downloadCourses = (courses) => {
     const header = "Title,Platform,Duration,Difficulty,Tags\n";
     const content = courses.map(course =>
-      `"${course.title}","${course.platform}","${course.duration}","${course.difficulty}","${course.tags.join(" | ")}"`
+      "${course.title}","${course.platform}","${course.duration}","${course.difficulty}","${course.tags.join(" | ")}"
     ).join("\n");
 
     const blob = new Blob([header + content], { type: "text/csv;charset=utf-8;" });
@@ -73,20 +72,47 @@ setCourses(response.data);
 
   if (loading) {
     return (
-      <Container className="text-center mt-5">
-        <Spinner animation="border" variant="primary" />
+      <Container
+        className="text-center mt-5"
+        style={{
+          backgroundImage: 'url("/assets/coffee-recommendation-bg.jpg")',
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          minHeight: "100vh",
+          color: "#4b3621",
+          fontFamily: "Georgia, serif"
+        }}
+      >
+        <Spinner animation="border" variant="dark" />
         <p>Loading recommendations...</p>
       </Container>
     );
   }
 
   return (
-    <Container className="mt-5 recommendations">
-      <h2 className="text-center mb-4">🎯 Recommended Courses</h2>
+    <Container
+      className="mt-5 recommendations"
+      style={{
+        backgroundImage: 'url("/assets/coffee-recommendation-bg.jpg")',
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        minHeight: "100vh",
+        paddingBottom: "5rem",
+        color: "#4b3621",
+        fontFamily: "Georgia, serif"
+      }}
+    >
+      <h2 className="text-center mb-4" style={{ color: "#6f4e37" }}>
+        🎯 Recommended Courses
+      </h2>
 
       <Row className="mb-4">
         <Col md={6}>
-          <Form.Select value={platformFilter} onChange={(e) => setPlatformFilter(e.target.value)}>
+          <Form.Select
+            value={platformFilter}
+            onChange={(e) => setPlatformFilter(e.target.value)}
+            style={{ backgroundColor: "#f8f1e7", borderColor: "#6f4e37", color: "#4b3621" }}
+          >
             <option value="">Filter by Platform</option>
             <option value="Coursera">Coursera</option>
             <option value="Udemy">Udemy</option>
@@ -95,7 +121,11 @@ setCourses(response.data);
           </Form.Select>
         </Col>
         <Col md={6}>
-          <Form.Select value={difficultyFilter} onChange={(e) => setDifficultyFilter(e.target.value)}>
+          <Form.Select
+            value={difficultyFilter}
+            onChange={(e) => setDifficultyFilter(e.target.value)}
+            style={{ backgroundColor: "#f8f1e7", borderColor: "#6f4e37", color: "#4b3621" }}
+          >
             <option value="">Filter by Difficulty</option>
             <option value="Beginner">Beginner</option>
             <option value="Intermediate">Intermediate</option>
@@ -107,8 +137,21 @@ setCourses(response.data);
       <Row>
         {filteredCourses.map((course, index) => (
           <Col md={6} lg={4} key={index} className="mb-4">
-            <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}>
-              <Card className="course-card h-100">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+            >
+              <Card
+                className="course-card h-100"
+                style={{
+                  backgroundColor: "#f8f1e7",
+                  color: "#4b3621",
+                  border: "1px solid #6f4e37",
+                  borderRadius: "12px",
+                  boxShadow: "0 4px 10px rgba(0, 0, 0, 0.15)"
+                }}
+              >
                 <Card.Body>
                   <Card.Title>{course.title}</Card.Title>
                   <Card.Subtitle className="mb-2 text-muted">
@@ -120,14 +163,17 @@ setCourses(response.data);
                     <strong>Tags:</strong> {course.tags.join(", ")}
                   </Card.Text>
                   <div className="d-flex justify-content-between">
-                    <Button variant="success" href={course.link} target="_blank">
+                    <Button variant="dark" href={course.link} target="_blank">
                       Enroll Now
                     </Button>
-                    <Button variant="outline-secondary" onClick={() => {
-                      saveCourse(course);
-                      alert("💾 Saved to your profile!");
-                    }}>
-                      💾 Save for Later
+                    <Button
+                      variant="outline-dark"
+                      onClick={() => {
+                        saveCourse(course);
+                        alert("💾 Saved to your profile!");
+                      }}
+                    >
+                      💾 Save
                     </Button>
                   </div>
                 </Card.Body>
@@ -139,14 +185,26 @@ setCourses(response.data);
 
       {filteredCourses.length > 0 && (
         <div className="text-center mt-5 d-flex flex-wrap justify-content-center gap-3">
-          <Button variant="outline-primary" size="lg" onClick={() => navigate("/feedback")}>
+          <Button
+            variant="outline-dark"
+            size="lg"
+            onClick={() => navigate("/feedback")}
+          >
             💬 Give Feedback
           </Button>
-          <Button variant="warning" size="lg" onClick={() => navigate("/quiz")}>
+          <Button
+            variant="dark"
+            size="lg"
+            onClick={() => navigate("/quiz")}
+          >
             🔁 Retake Quiz
           </Button>
-          <Button variant="info" size="lg" onClick={() => downloadCourses(filteredCourses)}>
-            📄 Download Recommendations
+          <Button
+            variant="outline-secondary"
+            size="lg"
+            onClick={() => downloadCourses(filteredCourses)}
+          >
+            📄 Download CSV
           </Button>
         </div>
       )}

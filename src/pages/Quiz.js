@@ -1,8 +1,8 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Form, Button, Card, Container, ProgressBar } from "react-bootstrap";
-import axios from "../utils/axiosConfig"; // already includes JWT via interceptor
+import bgImage from "../assets/coffee-quiz-bg.png";
+import axios from "../utils/axiosConfig";
 
 export default function Quiz() {
   const navigate = useNavigate();
@@ -20,17 +20,10 @@ export default function Quiz() {
     setAnswers({ ...answers, [e.target.name]: e.target.value });
   };
 
-  const mapCourseLengthToEnum = (length) => {
-    if (length === "short") return "ONE_TO_FOUR_WEEKS";
-    if (length === "medium") return "FOUR_TO_EIGHT_WEEKS";
-    return "EIGHT_PLUS_WEEKS";
-  };
-
   const handleNext = () => {
     if (level < 3) {
       setLevel(level + 1);
     } else {
-      // Save answers to localStorage for Recommendation.js to use
       localStorage.setItem("quizAnswers", JSON.stringify(answers));
       navigate("/recommendations");
     }
@@ -38,18 +31,83 @@ export default function Quiz() {
 
   const progress = level * 33;
 
+  const isCurrentLevelValid = () => {
+    if (level === 1) return answers.interest && answers.learningStyle;
+    if (level === 2) return answers.courseLength && answers.preferredPlatform;
+    if (level === 3) return answers.difficulty && answers.goal.trim().length > 0;
+    return false;
+  };
+
+  // Styling
+  const backgroundStyle = {
+    backgroundImage: `url(${bgImage})`,
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+    minHeight: "100vh",
+    display: "flex",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    padding: "2rem 4vw",
+    fontFamily: "Georgia, serif",
+    color: "#4b3621",
+  };
+
+  const cardStyle = {
+    backgroundColor: "#f8f1e7",
+    border: "none",
+    borderRadius: "12px",
+    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.25)",
+    width: "100%",
+    maxWidth: "500px",
+    padding: "1.5rem 2rem",
+    maxHeight: "90vh",
+    overflowY: "auto",
+  };
+
+  const labelStyle = {
+    fontWeight: "bold",
+    color: "#6f4e37",
+  };
+
+  const progressBarStyle = {
+    height: "10px",
+    backgroundColor: "#d3b8a3", // light mocha background
+  };
+
+  const progressVariant = "#6f4e37"; // rich coffee color
+
   return (
-    <Container className="my-5">
-      <Card className="shadow-sm">
+    <div style={backgroundStyle}>
+      <Card style={cardStyle}>
         <Card.Body>
-          <h2 className="text-center mb-3">🧠 Interest Quiz – Level {level}</h2>
-          <ProgressBar now={progress} label={`${progress}%`} className="mb-4" />
+          <h2 className="text-center mb-3" style={{ color: "#6f4e37" }}>
+            🧠 Interest Quiz – Level {level}
+          </h2>
+
+          <ProgressBar
+            now={progress}
+            label=""
+            className="mb-4"
+            style={progressBarStyle}
+            variant="custom"
+            striped
+            animated
+          >
+            <div
+              style={{
+                width: `${progress}%`,
+                backgroundColor: progressVariant,
+                height: "100%",
+                borderRadius: "10px",
+              }}
+            ></div>
+          </ProgressBar>
 
           <Form>
             {level === 1 && (
               <>
                 <Form.Group className="mb-3">
-                  <Form.Label>Which domain interests you the most?</Form.Label>
+                  <Form.Label style={labelStyle}>Which domain interests you the most?</Form.Label>
                   <Form.Select name="interest" value={answers.interest} onChange={handleChange} required>
                     <option value="">-- Select --</option>
                     <option value="AI">AI / Machine Learning</option>
@@ -61,10 +119,10 @@ export default function Quiz() {
                 </Form.Group>
 
                 <Form.Group className="mb-3">
-                  <Form.Label>What's your preferred learning style?</Form.Label>
-                  <Form.Check type="radio" label="Hands-on Projects" name="learningStyle" value="project" onChange={handleChange} />
-                  <Form.Check type="radio" label="Videos & Visuals" name="learningStyle" value="video" onChange={handleChange} />
-                  <Form.Check type="radio" label="Reading & Theory" name="learningStyle" value="theory" onChange={handleChange} />
+                  <Form.Label style={labelStyle}>What's your preferred learning style?</Form.Label>
+                  <Form.Check type="radio" label="Hands-on Projects" name="learningStyle" value="project" onChange={handleChange} required />
+                  <Form.Check type="radio" label="Videos & Visuals" name="learningStyle" value="video" onChange={handleChange} required />
+                  <Form.Check type="radio" label="Reading & Theory" name="learningStyle" value="theory" onChange={handleChange} required />
                 </Form.Group>
               </>
             )}
@@ -72,7 +130,7 @@ export default function Quiz() {
             {level === 2 && (
               <>
                 <Form.Group className="mb-3">
-                  <Form.Label>What course duration works best for you?</Form.Label>
+                  <Form.Label style={labelStyle}>What course duration works best for you?</Form.Label>
                   <Form.Select name="courseLength" value={answers.courseLength} onChange={handleChange} required>
                     <option value="">-- Select --</option>
                     <option value="short">2–4 weeks</option>
@@ -82,11 +140,11 @@ export default function Quiz() {
                 </Form.Group>
 
                 <Form.Group className="mb-3">
-                  <Form.Label>Preferred platform?</Form.Label>
-                  <Form.Check type="radio" name="preferredPlatform" value="Coursera" label="Coursera" onChange={handleChange} />
-                  <Form.Check type="radio" name="preferredPlatform" value="Udemy" label="Udemy" onChange={handleChange} />
-                  <Form.Check type="radio" name="preferredPlatform" value="edX" label="edX" onChange={handleChange} />
-                  <Form.Check type="radio" name="preferredPlatform" value="Infosys" label="Infosys Springboard" onChange={handleChange} />
+                  <Form.Label style={labelStyle}>Preferred platform?</Form.Label>
+                  <Form.Check type="radio" name="preferredPlatform" value="Coursera" label="Coursera" onChange={handleChange} required />
+                  <Form.Check type="radio" name="preferredPlatform" value="Udemy" label="Udemy" onChange={handleChange} required />
+                  <Form.Check type="radio" name="preferredPlatform" value="edX" label="edX" onChange={handleChange} required />
+                  <Form.Check type="radio" name="preferredPlatform" value="Infosys" label="Infosys Springboard" onChange={handleChange} required />
                 </Form.Group>
               </>
             )}
@@ -94,7 +152,7 @@ export default function Quiz() {
             {level === 3 && (
               <>
                 <Form.Group className="mb-3">
-                  <Form.Label>What is your skill level?</Form.Label>
+                  <Form.Label style={labelStyle}>What is your skill level?</Form.Label>
                   <Form.Select name="difficulty" value={answers.difficulty} onChange={handleChange} required>
                     <option value="">-- Select --</option>
                     <option value="beginner">Beginner</option>
@@ -104,7 +162,7 @@ export default function Quiz() {
                 </Form.Group>
 
                 <Form.Group className="mb-3">
-                  <Form.Label>What’s your goal?</Form.Label>
+                  <Form.Label style={labelStyle}>What’s your goal?</Form.Label>
                   <Form.Control
                     as="textarea"
                     rows={2}
@@ -112,19 +170,29 @@ export default function Quiz() {
                     placeholder="e.g., Get an internship, build a project, upskill for job"
                     value={answers.goal}
                     onChange={handleChange}
+                    required
                   />
                 </Form.Group>
               </>
             )}
 
-            <div className="text-center">
-              <Button variant="primary" onClick={handleNext}>
+            <div className="text-center mt-3">
+              <Button
+                variant="dark"
+                onClick={handleNext}
+                disabled={!isCurrentLevelValid()}
+                style={{
+                  backgroundColor: "#6f4e37",
+                  border: "none",
+                  width: "100%",
+                }}
+              >
                 {level < 3 ? "Next →" : "Get Recommendations"}
               </Button>
             </div>
           </Form>
         </Card.Body>
       </Card>
-    </Container>
+    </div>
   );
 }
