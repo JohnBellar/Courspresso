@@ -1,3 +1,4 @@
+// src/pages/Login.js
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Container, Form, Button, Card, Alert } from "react-bootstrap";
@@ -13,64 +14,62 @@ export default function Login() {
   const [role, setRole] = useState("user");
   const [error, setError] = useState("");
 
- const handleLogin = async (e) => {
-  e.preventDefault();
-  setError("");
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError("");
 
-  try {
-    const res = await axios.post("/api/auth/signin", {
-      loginId: email,
-      password,
-    });
+    try {
+      const res = await axios.post("/api/auth/signin", {
+        loginId: email,
+        password,
+      });
 
-    const { token, role, email: userEmail, userId } = res.data;
-    console.log("🟢 Login response:", res.data);
+      const { token, role, email: userEmail, userId } = res.data;
 
-    localStorage.setItem("token", token);
-    localStorage.setItem("role", role);
-    localStorage.setItem("userId", userId);
-    localStorage.setItem("email", userEmail);
+      localStorage.setItem("token", token);
+      localStorage.setItem("role", role);
+      localStorage.setItem("userId", userId);
+      localStorage.setItem("email", userEmail);
 
-    login({ email: userEmail, userId }, role);
+      login({ email: userEmail, userId }, role);
 
-    if (role.toUpperCase() === "ADMIN") {
-      navigate("/admin");
-    } else {
-      try {
-        const profileStatusRes = await axios.get(`/profile/${userId}/status`);
-        if (profileStatusRes.data === true) {
-          navigate("/user-dashboard");
-        } else {
+      if (role.toUpperCase() === "ADMIN") {
+        navigate("/admin");
+      } else {
+        try {
+          const profileStatusRes = await axios.get(`/profile/${userId}/status`);
+          if (profileStatusRes.data === true) {
+            navigate("/user-dashboard");
+          } else {
+            navigate("/register");
+          }
+        } catch (err) {
+          console.warn("Profile check failed:", err);
           navigate("/register");
         }
-      } catch (err) {
-        console.warn("Profile check failed:", err);
-        navigate("/register");
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      const msg = err.response?.data?.message || "Invalid credentials";
+
+      if (msg.toLowerCase().includes("not verified")) {
+        alert("🔁 Email not verified. Sending OTP again...");
+        try {
+          await axios.post("/api/auth/request-otp", {
+            email,
+            purpose: "VERIFICATION",
+          });
+          navigate("/verify-otp", { state: { email, purpose: "VERIFICATION" } });
+        } catch (otpErr) {
+          console.error("Failed to resend OTP:", otpErr);
+          setError("Failed to resend OTP. Please try again.");
+        }
+      } else {
+        setError(msg);
       }
     }
-  } catch (err) {
-    console.error("Login error:", err);
-    const msg = err.response?.data?.message || "Invalid credentials";
+  };
 
-    if (msg.toLowerCase().includes("not verified")) {
-      alert("🔁 Email not verified. Sending OTP again...");
-      try {
-        await axios.post("/api/auth/request-otp", {
-          email,
-          purpose: "VERIFICATION",
-        });
-        navigate("/verify-otp", { state: { email } });
-      } catch (otpErr) {
-        console.error("Failed to resend OTP:", otpErr);
-        setError("Failed to resend OTP. Please try again.");
-      }
-    } else {
-      setError(msg);
-    }
-  }
-};
-
-  // Coffee theme styles
   const backgroundStyle = {
     backgroundImage: `url(${bgLogin})`,
     backgroundSize: "cover",
@@ -132,6 +131,10 @@ export default function Login() {
               required
             />
           </Form.Group>
+
+          <div style={{ textAlign: "right", marginBottom: "1rem" }}>
+            <a href="/forgot-password" style={linkStyle}>Forgot password?</a>
+          </div>
 
           <Button
             variant="dark"

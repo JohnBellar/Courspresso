@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Container, Card, Row, Col, Spinner, Alert } from "react-bootstrap";
-import axios from "../utils/axiosConfig"; 
-import defaultProfile from "../assets/DefaultProfile.png"; 
+import { Container, Card, Row, Col, Spinner, Alert, Button, Form } from "react-bootstrap";
+import axios from "../utils/axiosConfig";
+import defaultProfile from "../assets/DefaultProfile.png";
+import { useNavigate } from "react-router-dom";
 
 export default function UserDashboard() {
   const [profile, setProfile] = useState(null);
@@ -10,6 +11,11 @@ export default function UserDashboard() {
   const [error, setError] = useState("");
   const [profileImageUrl, setProfileImageUrl] = useState(null);
   const fileInputRef = useRef(null);
+  const [feedback, setFeedback] = useState("");
+  const [feedbackMsg, setFeedbackMsg] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [editedProfile, setEditedProfile] = useState({});
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -20,29 +26,31 @@ export default function UserDashboard() {
 
         const headers = { Authorization: `Bearer ${token}` };
 
-        // Get profile
         const profileRes = await axios.get(`/profile/${userId}`, { headers });
         setProfile(profileRes.data);
+        setEditedProfile(profileRes.data);
 
-        // Get photo
         const photoRes = await fetch("http://localhost:8080/users/profile-photo", { headers });
         if (photoRes.ok) {
           const blob = await photoRes.blob();
           setProfileImageUrl(URL.createObjectURL(blob));
-        } else {
-          setProfileImageUrl(null); // fallback to default
         }
 
-        // Get saved courses
         const savedRes = await axios.get(`/saved-courses`, { headers });
         const saved = savedRes.data || [];
 
+        // 👉 FIXED: No Authorization header used here for public /courses/{id}
         const courses = await Promise.all(
           saved.map(async (c) => {
             try {
-              const res = await axios.get(`/courses/${c.courseId}`, { headers });
+              const res = await axios.get(`/courses/${c.courseId}`); // No headers
               return res.data;
-            } catch {
+            } catch (err) {
+              if (err.response && err.response.status === 403) {
+                console.warn("Access forbidden for course:", c.courseId);
+              } else {
+                console.error("Course not found:", c.courseId, err);
+              }
               return null;
             }
           })
@@ -89,8 +97,61 @@ export default function UserDashboard() {
     }
   };
 
+  const handleSubmitFeedback = async () => {
+    try {
+      await axios.post("/feedback", {
+        userId: localStorage.getItem("userId"),
+        message: feedback,
+      });
+      setFeedbackMsg("Thanks for your feedback! 🚀");
+      setFeedback("");
+      setTimeout(() => setFeedbackMsg(""), 3000);
+    } catch (error) {
+      console.error("Failed to submit feedback:", error);
+    }
+  };
+
   const triggerFileInput = () => {
     fileInputRef.current?.click();
+  };
+
+  const handleEdit = () => {
+    setEditing(true);
+  };
+
+  const handleChange = (e) => {
+    setEditedProfile({
+      ...editedProfile,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleSave = async () => {
+    try {
+      const userId = localStorage.getItem("userId");
+      const payload = {
+        fullName: editedProfile.fullName,
+        phoneNumber: editedProfile.phoneNumber,
+        educationLevel: editedProfile.educationLevel,
+        preferredPlatform: editedProfile.preferredPlatform,
+        primaryInterests: typeof editedProfile.primaryInterests === "string"
+          ? editedProfile.primaryInterests.split(",").map((s) => s.trim())
+          : editedProfile.primaryInterests,
+        learningGoals: editedProfile.learningGoals,
+        preferredDifficultyLevel: editedProfile.preferredDifficultyLevel,
+        hobbies: typeof editedProfile.hobbies === "string"
+          ? editedProfile.hobbies.split(",").map((s) => s.trim())
+          : editedProfile.hobbies,
+      };
+
+      await axios.put(`/profile/${userId}`, payload);
+      alert("Profile updated successfully");
+      setProfile(editedProfile);
+      setEditing(false);
+    } catch (err) {
+      alert("Failed to update profile");
+      console.error(err);
+    }
   };
 
   if (loading) {
@@ -107,14 +168,14 @@ export default function UserDashboard() {
         <Alert variant="danger">{error}</Alert>
       </Container>
     );
-  } const img = "assets/DefaultProfile.png";
+  }
 
   return (
-   
     <Container className="my-5">
       <h2 className="mb-4">👤 User Dashboard</h2>
 
-      {/* 👤 Profile Image Section */}
+      {feedbackMsg && <Alert variant="success">{feedbackMsg}</Alert>}
+
       <div className="text-center mb-4">
         <div
           style={{
@@ -131,29 +192,15 @@ export default function UserDashboard() {
         ></div>
 
         <div className="mt-2">
-          {profileImageUrl ? (
-            <span
-              className="text-primary d-block mb-2"
-              style={{ cursor: "pointer", textDecoration: "underline" }}
-              onClick={triggerFileInput}
-            >
-              Change Profile Photo
-            </span>
-          ) : (
-            <>
-              <label className="mb-2 d-block">Upload Profile Photo</label>
-              <input
-                type="file"
-                onChange={handlePhotoUpload}
-                accept="image/png, image/jpeg"
-                className="form-control-file"
-                style={{ maxWidth: 300, margin: "0 auto" }}
-              />
-            </>
-          )}
+          <span
+            className="text-primary d-block mb-2"
+            style={{ cursor: "pointer", textDecoration: "underline" }}
+            onClick={triggerFileInput}
+          >
+            Change Profile Photo
+          </span>
         </div>
 
-        {/* Hidden input for triggering file dialog */}
         <input
           ref={fileInputRef}
           type="file"
@@ -163,22 +210,127 @@ export default function UserDashboard() {
         />
       </div>
 
-      {/* 🧾 Profile Info & Saved Courses */}
       <Row>
         <Col md={6}>
           <Card className="mb-4 shadow-sm">
             <Card.Header>📋 Profile Information</Card.Header>
             <Card.Body>
-              <p><strong>Full Name:</strong> {profile?.fullName}</p>
-              <p><strong>Username:</strong> {profile?.username}</p>
-              <p><strong>Email:</strong> {profile?.email}</p>
-              <p><strong>Phone:</strong> {profile?.phoneNumber}</p>
-              <p><strong>Education Level:</strong> {profile?.educationLevel}</p>
-              <p><strong>Preferred Platform:</strong> {profile?.preferredPlatform}</p>
-              <p><strong>Primary Interests:</strong> {profile?.primaryInterests?.join(", ")}</p>
-              <p><strong>Learning Goals:</strong> {profile?.learningGoals}</p>
-              <p><strong>Difficulty:</strong> {profile?.preferredDifficultyLevel}</p>
-              <p><strong>Hobbies:</strong> {profile?.hobbies?.join(", ")}</p>
+              {editing ? (
+                <Form>
+                  <Form.Group className="mb-2">
+                    <Form.Label>Full Name</Form.Label>
+                    <Form.Control
+                      type="text"
+                      name="fullName"
+                      value={editedProfile.fullName || ""}
+                      onChange={handleChange}
+                    />
+                  </Form.Group>
+
+                  <Form.Group className="mb-2">
+                    <Form.Label>Phone</Form.Label>
+                    <Form.Control
+                      type="text"
+                      name="phoneNumber"
+                      value={editedProfile.phoneNumber || ""}
+                      onChange={handleChange}
+                    />
+                  </Form.Group>
+
+                  <Form.Group className="mb-2">
+                    <Form.Label>Education Level</Form.Label>
+                    <Form.Select
+                      name="educationLevel"
+                      value={editedProfile.educationLevel || ""}
+                      onChange={handleChange}
+                    >
+                      <option value="">-- Select --</option>
+                      <option value="School">School</option>
+                      <option value="Diploma">Diploma</option>
+                      <option value="Undergraduate">Undergraduate</option>
+                      <option value="Postgraduate">Postgraduate</option>
+                    </Form.Select>
+                  </Form.Group>
+
+                  <Form.Group className="mb-2">
+                    <Form.Label>Preferred Platform</Form.Label>
+                    <Form.Select
+                      name="preferredPlatform"
+                      value={editedProfile.preferredPlatform || ""}
+                      onChange={handleChange}
+                    >
+                      <option value="">-- Choose Platform --</option>
+                      <option value="Coursera">Coursera</option>
+                      <option value="Udemy">Udemy</option>
+                      <option value="edX">edX</option>
+                      <option value="Infosys Springboard">Infosys Springboard</option>
+                    </Form.Select>
+                  </Form.Group>
+
+                  <Form.Group className="mb-2">
+                    <Form.Label>Primary Interests</Form.Label>
+                    <Form.Control
+                      type="text"
+                      name="primaryInterests"
+                      value={editedProfile.primaryInterests || ""}
+                      onChange={handleChange}
+                      placeholder="e.g. AI, Web Development"
+                    />
+                  </Form.Group>
+
+                  <Form.Group className="mb-2">
+                    <Form.Label>Learning Goals</Form.Label>
+                    <Form.Control
+                      as="textarea"
+                      rows={2}
+                      name="learningGoals"
+                      value={editedProfile.learningGoals || ""}
+                      onChange={handleChange}
+                    />
+                  </Form.Group>
+
+                  <Form.Group className="mb-2">
+                    <Form.Label>Preferred Difficulty Level</Form.Label>
+                    <Form.Select
+                      name="preferredDifficultyLevel"
+                      value={editedProfile.preferredDifficultyLevel || ""}
+                      onChange={handleChange}
+                    >
+                      <option value="">-- Choose --</option>
+                      <option value="Beginner">Beginner</option>
+                      <option value="Intermediate">Intermediate</option>
+                      <option value="Advanced">Advanced</option>
+                    </Form.Select>
+                  </Form.Group>
+
+                  <Form.Group className="mb-3">
+                    <Form.Label>Hobbies</Form.Label>
+                    <Form.Control
+                      type="text"
+                      name="hobbies"
+                      value={editedProfile.hobbies || ""}
+                      onChange={handleChange}
+                      placeholder="e.g. Reading, Music, Gaming"
+                    />
+                  </Form.Group>
+
+                  <Button variant="warning" onClick={handleSave}>Save</Button>
+                </Form>
+              ) : (
+                <>
+                  <p><strong>Full Name:</strong> {profile?.fullName}</p>
+                  <p><strong>Username:</strong> {profile?.username}</p>
+                  <p><strong>Email:</strong> {profile?.email}</p>
+                  <p><strong>Phone:</strong> {profile?.phoneNumber}</p>
+                  <p><strong>Education Level:</strong> {profile?.educationLevel}</p>
+                  <p><strong>Preferred Platform:</strong> {profile?.preferredPlatform}</p>
+                  <p><strong>Primary Interests:</strong> {profile?.primaryInterests?.join(", ")}</p>
+                  <p><strong>Learning Goals:</strong> {profile?.learningGoals}</p>
+                  <p><strong>Difficulty:</strong> {profile?.preferredDifficultyLevel}</p>
+                  <p><strong>Hobbies:</strong> {profile?.hobbies?.join(", ")}</p>
+                  <Button variant="warning" onClick={handleEdit}>Update</Button>
+                </>
+              )}
             </Card.Body>
           </Card>
         </Col>

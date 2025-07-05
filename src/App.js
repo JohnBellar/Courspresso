@@ -17,6 +17,9 @@ import VerifyOtp from './pages/Verify-otp';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/protectedRoute';
 import Logout from './pages/logout';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+
 
 function App() {
   return (
@@ -66,6 +69,8 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/verify-otp" element={<VerifyOtp />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/unauthorized" element={<h2>❌ Unauthorized</h2>} />
               <Route path="/logout" element={<Logout />} />
             </Routes>

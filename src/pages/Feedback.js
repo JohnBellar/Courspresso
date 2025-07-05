@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Container, Card, Form, Button, Alert } from "react-bootstrap";
-import bgFeedback from "../assets/coffee-feedback-bg.png";
+import coffeebgImage from "../assets/coffee-feedback-bg.png";
 
 export default function Feedback() {
   const [formData, setFormData] = useState({
@@ -18,15 +18,51 @@ export default function Feedback() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Feedback submitted:", formData);
-    setSubmitted(true);
+
+    const userId = localStorage.getItem("userId");
+
+    const payload = {
+      userId: userId,
+      recommendationRating: parseInt(formData.recommendationRating),
+      relevance:
+        formData.relevance === "very"
+          ? "Very relevant"
+          : formData.relevance === "somewhat"
+          ? "Somewhat relevant"
+          : "Not relevant",
+      enrolled: formData.enrolled === "yes",
+      courseQualityRating:
+        formData.enrolled === "yes"
+          ? parseInt(formData.courseQualityRating)
+          : null,
+      feedback: formData.suggestions,
+      appExperience: formData.uiExperience,
+    };
+
+    try {
+      const res = await fetch("/feedback", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        console.log("Feedback submitted:", payload);
+        setSubmitted(true);
+      } else {
+        console.error("Failed to submit feedback");
+      }
+    } catch (err) {
+      console.error("Error submitting feedback:", err);
+    }
   };
 
-  // Coffee-themed styles
   const backgroundStyle = {
-    backgroundImage: `url(${bgFeedback})`,
+    backgroundImage: `url("${coffeebgImage}")`,
     backgroundSize: "cover",
     backgroundPosition: "center",
     minHeight: "100vh",
@@ -37,17 +73,17 @@ export default function Feedback() {
   };
 
   const cardStyle = {
-    backgroundColor: "#f8f1e7", // Creamy
+    backgroundColor: "#f8f1e7",
     border: "none",
     borderRadius: "12px",
     boxShadow: "0 4px 10px rgba(0,0,0,0.2)",
-    maxWidth: "700px",           // ✅ Reduced width
-    margin: "0 auto",            // ✅ Centered horizontally
+    maxWidth: "700px",
+    margin: "0 auto",
   };
 
   const labelStyle = {
     fontWeight: "bold",
-    color: "#6f4e37", // Coffee brown
+    color: "#6f4e37",
   };
 
   return (

@@ -49,8 +49,9 @@ public class SecurityConfig {
                     "/api/auth/reset-password"
                 ).permitAll() // public endpoints
                 
-                .requestMatchers(HttpMethod.GET, "/courses")
-                .permitAll()
+               .requestMatchers(HttpMethod.GET, "/courses/**")
+               .permitAll()
+
                 
                 .requestMatchers("/admin/**").hasRole("ADMIN") // role-based access
                 .anyRequest().authenticated() // all other requests require authentication

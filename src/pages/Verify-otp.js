@@ -3,34 +3,42 @@ import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Container, Form, Button, Card, Alert } from "react-bootstrap";
 import axios from "axios";
-import { useAuth } from "../context/AuthContext";
 import bgOtp from "../assets/coffee-otp-bg.png";
 
 export default function VerifyOtp() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { login } = useAuth();
-
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const email = location.state?.email;
+  const purpose = location.state?.purpose || "VERIFICATION"; // Default to VERIFICATION
 
   const handleVerify = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
-  
+
     try {
       const res = await axios.post("http://localhost:8080/api/auth/verify-otp", {
-        email: location.state?.email,
+        email,
         otp,
-        purpose: "VERIFICATION",
+        purpose
       });
-  
-      alert("✅ OTP verified! Please log in.");
-      navigate("/login");
+
+      if (purpose === "PASSWORD_RESET") {
+        // Navigate to reset password page with token
+        navigate("/reset-password", {
+          state: {
+            token: res.data.token,
+            email,
+          },
+        });
+      } else {
+        alert("✅ OTP verified! Please log in.");
+        navigate("/login");
+      }
     } catch (err) {
       setError(err.response?.data?.message || "Invalid OTP");
     } finally {
@@ -44,7 +52,7 @@ export default function VerifyOtp() {
     backgroundPosition: "center",
     minHeight: "100vh",
     paddingTop: "80px",
-    paddingBottom: "80px"
+    paddingBottom: "80px",
   };
 
   const cardStyle = {
@@ -52,11 +60,11 @@ export default function VerifyOtp() {
     border: "1px solid #d3bfa3",
     borderRadius: "12px",
     color: "#4b3621",
-    fontFamily: "Georgia, serif"
+    fontFamily: "Georgia, serif",
   };
 
   const headingStyle = {
-    color: "#6f4e37"
+    color: "#6f4e37",
   };
 
   return (
