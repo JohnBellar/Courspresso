@@ -1,11 +1,9 @@
 services:
   - type: web
     name: courspresso-backend
-    runtime: java
+    runtime: docker
     plan: free
     rootDir: mooc-edtech-backend
-    buildCommand: ./mvnw clean install
-    startCommand: ./mvnw spring-boot:run
     envVars:
       - key: MONGODB_URI
         value: mongodb+srv://dhanesh76:DhAnEsHmongo5@mooc.sxm2q8w.mongodb.net/auth-portal?retryWrites=true&w=majority&appName=mooc
