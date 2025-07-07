@@ -9,7 +9,6 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  Legend,
   PieChart,
   Pie,
   ResponsiveContainer,
@@ -32,7 +31,8 @@ export default function AdminDashboard() {
   const [profileImageUrl, setProfileImageUrl] = useState(null);
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
-
+  const [feedbackSearch, setFeedbackSearch] = useState("");
+  const [feedbacks, setFeedbacks] = useState([]);
   useEffect(() => {
     if (!localStorage.getItem("token")) {
       navigate("/login");
@@ -42,6 +42,7 @@ export default function AdminDashboard() {
     loadStats();
     loadUsers();
     fetchProfilePhoto();
+    loadAllFeedbacks();
 
     const interval = setInterval(() => loadStats(), 60000);
     return () => clearInterval(interval);
@@ -105,6 +106,48 @@ export default function AdminDashboard() {
       console.error("Stats fetch error:", e);
     }
   };
+  
+  const loadAllFeedbacks = async () => {
+    try {
+      const res = await axios.get("/feedback/all");
+      setFeedbacks(res.data);
+    } catch (e) {
+      console.error("Failed to load all feedbacks", e);
+    }
+  };
+
+  const handleFeedbackSearch = async () => {
+    if (!feedbackSearch.trim()) {
+      return loadAllFeedbacks();
+    }
+  
+    const matchedCourses = courses.filter(c =>
+      c.title.toLowerCase().includes(feedbackSearch.toLowerCase())
+    );
+  
+    if (matchedCourses.length === 0) {
+      setFeedbacks([]);
+      return;
+    }
+  
+    try {
+      const allFeedbacks = [];
+  
+      for (const course of matchedCourses) {
+        const res = await axios.get(`/feedback/all/${course.id}`);
+        if (Array.isArray(res.data)) {
+          allFeedbacks.push(
+            ...res.data.map(f => ({ ...f, courseTitle: course.title }))
+          );
+        }
+      }
+  
+      setFeedbacks(allFeedbacks);
+    } catch (e) {
+      console.error("Failed to fetch feedbacks for courses", e);
+    }
+  };
+  
 
   const deleteCourse = async (id) => {
     try {
@@ -235,9 +278,20 @@ export default function AdminDashboard() {
       </div>
 
       {stats?.platformDistribution && (
-  <div className="mb-5 mt-4 d-flex">
+  <div className="mb-5 mt-4 d-flex flex-column flex-md-row">
     <div style={{ flex: 1 }}>
-      <h5 style={headingStyle}>Platform Distribution (Courses)</h5>
+      <h5 style={headingStyle}>Platform Distribution (Courses) <img
+    src={refreshIcon}
+    alt="Refresh"
+    onClick={handleRefresh}
+    style={{
+      width: "24px",
+      height: "24px",
+      cursor: "pointer",
+      transform: isRotating ? "rotate(360deg)" : "rotate(0deg)",
+      transition: "transform 1s linear"
+    }}
+  /></h5>
       <ResponsiveContainer width="100%" height={300}>
         <BarChart
           data={Object.entries(stats.platformDistribution).map(([platform, count]) => ({
@@ -271,7 +325,7 @@ export default function AdminDashboard() {
         </BarChart>
       </ResponsiveContainer>
     </div>
-    <div style={{ marginLeft: "2rem", minWidth: "150px" }}>
+    <div style={{ marginLeft: "2rem", minWidth: "150px", flexShrink: 0 }}>
       <h6 style={headingStyle}>Legend</h6>
       <ul style={{ listStyleType: "none", padding: 0 }}>
         {Object.entries(stats.platformDistribution).map(([platform], index) => (
@@ -295,7 +349,7 @@ export default function AdminDashboard() {
 
 
 {stats?.interestAreaPopularity && (
-  <div className="mb-5 d-flex">
+  <div className="mb-5 mt-4 d-flex flex-column flex-md-row">
     <div style={{ flex: 1 }}>
       <h5 style={headingStyle}>Interest Area Popularity (Users)</h5>
       <ResponsiveContainer width="100%" height={300}>
@@ -324,7 +378,7 @@ export default function AdminDashboard() {
         </PieChart>
       </ResponsiveContainer>
     </div>
-    <div style={{ marginLeft: "2rem", minWidth: "150px" }}>
+    <div style={{ marginLeft: "2rem", minWidth: "150px", flexShrink: 0 }}>
       <h6 style={headingStyle}>Legend</h6>
       <ul style={{ listStyleType: "none", padding: 0 }}>
         {Object.entries(stats.interestAreaPopularity).map(([tag], index) => (
@@ -373,18 +427,19 @@ export default function AdminDashboard() {
         <button className="btn btn-outline-dark" onClick={() => handleSearch()}>Search</button>
       </div>
 
-      <ul className="list-group mb-4">
-        {courses.length === 0 ? (
-          <p>No courses available.</p>
-        ) : (
-          courses.map((course) => (
-            <li key={course.id} className="list-group-item d-flex justify-content-between align-items-center" style={{ backgroundColor: "#fffdf7" }}>
-              <span>{course.title}</span>
-              <button className="btn btn-danger btn-sm" onClick={() => deleteCourse(course.id)}>Delete</button>
-            </li>
-          ))
-        )}
-      </ul>
+      <ul className="list-group mb-4" style={{ maxHeight: "300px", overflowY: "auto" }}>
+  {courses.length === 0 ? (
+    <p>No courses available.</p>
+  ) : (
+    courses.map((course) => (
+      <li key={course.id} className="list-group-item d-flex justify-content-between align-items-center" style={{ backgroundColor: "#fffdf7" }}>
+        <span>{course.title}</span>
+        <button className="btn btn-danger btn-sm" onClick={() => deleteCourse(course.id)}>Delete</button>
+      </li>
+    ))
+  )}
+</ul>
+
 
       <h4 style={headingStyle}>Manage Users</h4>
       <div className="input-group mb-3">
@@ -396,18 +451,49 @@ export default function AdminDashboard() {
           onChange={(e) => setUserSearch(e.target.value)}
         />
       </div>
-      <ul className="list-group">
-        {filteredUsers.length === 0 ? (
-          <p>No users found.</p>
-        ) : (
-          filteredUsers.map((user) => (
-            <li key={user.username} className="list-group-item d-flex justify-content-between align-items-center">
-              <span>{user.username} ({user.email})</span>
-              <button className="btn btn-danger btn-sm" onClick={() => handleUserDelete(user.username)}>Delete</button>
-            </li>
-          ))
-        )}
-      </ul>
+      <ul className="list-group mb-4" style={{ maxHeight: "300px", overflowY: "auto" }}>
+  {filteredUsers.length === 0 ? (
+    <p>No users found.</p>
+  ) : (
+    filteredUsers.map((user) => (
+      <li key={user.username} className="list-group-item d-flex justify-content-between align-items-center">
+        <span>{user.username} ({user.email})</span>
+        <button className="btn btn-danger btn-sm" onClick={() => handleUserDelete(user.username)}>Delete</button>
+      </li>
+    ))
+  )}
+</ul>
+
+
+{/* ✅ Outside of users list */}
+<h4 style={headingStyle}>View Course Feedback</h4>
+<div className="input-group mb-3">
+  <input
+    type="text"
+    className="form-control"
+    placeholder="Search course for feedback..."
+    value={feedbackSearch}
+    onChange={(e) => setFeedbackSearch(e.target.value)}
+  />
+  <button className="btn btn-outline-dark" onClick={handleFeedbackSearch}>Search</button>
+</div>
+<div style={{ maxHeight: "300px", overflowY: "auto" }}>
+  <ul className="list-group mb-4">
+    {feedbacks.length === 0 ? (
+      <li className="list-group-item">No feedback found.</li>
+    ) : (
+      feedbacks.map((f, idx) => (
+        <li key={idx} className="list-group-item">
+          <strong>Course:</strong> {courses.find(c => c.id === f.courseId)?.title || f.courseId}<br />
+          <strong>Rating:</strong> {f.rating} <br />
+          <strong>Comment:</strong> {f.comment} <br />
+        </li>
+      ))
+    )}
+  </ul>
+</div>
+
+
     </div>
   );
 }

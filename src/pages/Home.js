@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "../utils/axiosConfig";
-import Chatbot from "../components/Chatbot";
+
 
 // Style object for cards
 const cardStyle = {
