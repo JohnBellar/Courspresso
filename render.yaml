@@ -2,11 +2,10 @@ services:
   - type: web
     name: courspresso-backend
     env: java
+    plan: free
+    rootDir: mooc-edtech-backend
     buildCommand: ./mvnw clean install
-    startCommand: java -jar target/*.jar
+    startCommand: ./mvnw spring-boot:run
     envVars:
-      - key: SPRING_PROFILES_ACTIVE
-        value: production
       - key: MONGODB_URI
         value: mongodb+srv://dhanesh76:DhAnEsHmongo5@mooc.sxm2q8w.mongodb.net/auth-portal?retryWrites=true&w=majority&appName=mooc
-    rootDir: mooc-edtech-backend
