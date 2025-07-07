@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Container, Form, Button, Card, Alert } from "react-bootstrap";
 import axios from "../utils/axiosConfig";
 import { useAuth } from "../context/AuthContext";
+import { jwtDecode } from "jwt-decode";
 import bgLogin from "../assets/coffee-login-bg.png";
 
 export default function Login() {
@@ -11,7 +12,6 @@ export default function Login() {
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("user");
   const [error, setError] = useState("");
 
   const handleLogin = async (e) => {
@@ -24,20 +24,24 @@ export default function Login() {
         password,
       });
 
-      const { token, role, email: userEmail, userId } = res.data;
+      const { token } = res.data;
+      const decoded = jwtDecode(token);
+      const role = decoded.role;
+      const userEmail = decoded.sub;
 
       localStorage.setItem("token", token);
       localStorage.setItem("role", role);
-      localStorage.setItem("userId", userId);
       localStorage.setItem("email", userEmail);
 
-      login({ email: userEmail, userId }, role);
+      login({ email: userEmail }, role, token);
 
       if (role.toUpperCase() === "ADMIN") {
         navigate("/admin");
       } else {
         try {
-          const profileStatusRes = await axios.get(`/profile/${userId}/status`);
+          const profileStatusRes = await axios.get("/profile/status", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
           if (profileStatusRes.data === true) {
             navigate("/user-dashboard");
           } else {
@@ -49,9 +53,7 @@ export default function Login() {
         }
       }
     } catch (err) {
-      console.error("Login error:", err);
       const msg = err.response?.data?.message || "Invalid credentials";
-
       if (msg.toLowerCase().includes("not verified")) {
         alert("🔁 Email not verified. Sending OTP again...");
         try {
@@ -108,7 +110,9 @@ export default function Login() {
         <h3 className="text-center mb-4" style={{ color: "#6f4e37" }}>
           🔐 Login
         </h3>
+
         {error && <Alert variant="danger">{error}</Alert>}
+
         <Form onSubmit={handleLogin}>
           <Form.Group className="mb-3">
             <Form.Label style={labelStyle}>Email</Form.Label>
@@ -133,7 +137,9 @@ export default function Login() {
           </Form.Group>
 
           <div style={{ textAlign: "right", marginBottom: "1rem" }}>
-            <a href="/forgot-password" style={linkStyle}>Forgot password?</a>
+            <a href="/forgot-password" style={linkStyle}>
+              Forgot password?
+            </a>
           </div>
 
           <Button
@@ -147,7 +153,7 @@ export default function Login() {
 
           <div style={{ marginTop: "1rem", textAlign: "center" }}>
             <p>
-              Don&apos;t have an account?{" "}
+              Don&apos;t have an account? {" "}
               <a href="/signup" style={linkStyle}>
                 Sign up here
               </a>

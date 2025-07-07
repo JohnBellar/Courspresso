@@ -40,12 +40,6 @@ export default function Register() {
 
     try {
       const email = localStorage.getItem("email");
-      const userId = localStorage.getItem("userId");
-
-      if (!userId) {
-        alert("User ID is missing. Please login again.");
-        return;
-      }
 
       const payload = {
         fullName: formData.fullName,
@@ -63,7 +57,7 @@ export default function Register() {
 
       console.log("🚀 Sending profile to backend:", payload);
 
-      await axios.post(`/profile/${userId}`, payload);
+      await axios.post(`/profile`, payload);
 
       alert("✅ Registration submitted successfully!");
       navigate("/user-dashboard");

@@ -5,7 +5,7 @@ import java.util.Date;
 import com.dhanesh.auth.portal.entity.AuthProvider;
 
 public record SigninResponse(
-    String userId, 
+    String id,
     String loginId,
     String role,
     String token,

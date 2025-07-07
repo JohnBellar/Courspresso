@@ -19,6 +19,7 @@ import ProtectedRoute from './components/protectedRoute';
 import Logout from './pages/logout';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import CourseDescp from './pages/CourseDescp';
 
 
 function App() {
@@ -32,6 +33,8 @@ function App() {
             <Routes>
               {/* Public route - accessible by anyone */}
               <Route path="/" element={<Home />} />
+              <Route path="/coursedescp" element={<CourseDescp />} />
+              <Route path="/coursedescp/:courseId" element={<CourseDescp />} />
 
               <Route
                 path="/register"
@@ -45,7 +48,7 @@ function App() {
               <Route path="/recommendations" element={<Recommendations />} />
               <Route path="/feedback" element={<Feedback />} />
               <Route path="/quiz" element={<Quiz />} />
-
+              
               <Route
                 path="/admin"
                 element={

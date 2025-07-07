@@ -1,6 +1,24 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import axios from "../utils/axiosConfig";
 import { useNavigate } from "react-router-dom";
+import refreshIcon from "../assets/refresh.jpg";
+import defaultProfile from "../assets/DefaultProfile.png";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  PieChart,
+  Pie,
+  ResponsiveContainer,
+  CartesianGrid,
+  Cell,
+} from "recharts";
+
+const barColors = ["#6f4e37", "#c97c5d", "#a0522d", "#deb887", "#d2691e", "#8b4513"];
+const pieColors = ["#f4a261", "#2a9d8f", "#e76f51", "#e9c46a", "#264653", "#ffb4a2"];
 
 export default function AdminDashboard() {
   const [courses, setCourses] = useState([]);
@@ -10,6 +28,9 @@ export default function AdminDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [users, setUsers] = useState([]);
   const [userSearch, setUserSearch] = useState("");
+  const [isRotating, setIsRotating] = useState(false);
+  const [profileImageUrl, setProfileImageUrl] = useState(null);
+  const fileInputRef = useRef(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -20,7 +41,52 @@ export default function AdminDashboard() {
     loadCourses();
     loadStats();
     loadUsers();
+    fetchProfilePhoto();
+
+    const interval = setInterval(() => loadStats(), 60000);
+    return () => clearInterval(interval);
   }, []);
+
+  const fetchProfilePhoto = async () => {
+    try {
+      const res = await fetch("http://localhost:8080/users/profile-photo", {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      if (res.ok) {
+        const blob = await res.blob();
+        setProfileImageUrl(URL.createObjectURL(blob));
+      }
+    } catch (err) {
+      console.error("Failed to fetch profile photo");
+    }
+  };
+
+  const triggerFileInput = () => fileInputRef.current?.click();
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      await axios.put("/users/profile-photo", formData, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      fetchProfilePhoto();
+      alert("Photo uploaded successfully!");
+    } catch {
+      alert("Failed to upload photo.");
+    }
+  };
+
+  const handleRefresh = async () => {
+    setIsRotating(true);
+    await loadStats();
+    setTimeout(() => setIsRotating(false), 1000);
+  };
 
   const loadCourses = async () => {
     try {
@@ -43,7 +109,7 @@ export default function AdminDashboard() {
   const deleteCourse = async (id) => {
     try {
       await axios.delete(`/admin/courses/${id}`);
-      handleSearch("", true); // reload all
+      handleSearch("", true);
     } catch (e) {
       console.error(e);
     }
@@ -87,7 +153,7 @@ export default function AdminDashboard() {
     try {
       await axios.delete(`/admin/users?username=${username}`);
       loadUsers();
-    } catch (err) {
+    } catch {
       alert("Failed to delete user");
     }
   };
@@ -118,21 +184,168 @@ export default function AdminDashboard() {
 
   return (
     <div className="container mt-4" style={coffeeStyles}>
-      <h2 style={headingStyle}>Admin Dashboard</h2>
-      {error && <p className="text-danger">{error}</p>}
-
-      {stats && (
-        <div className="mb-4">
-          <h5 style={headingStyle}>Summary</h5>
-          <ul>
-            <li>Admin Email: {stats.adminEmail}</li>
-            <li>Total Users: {stats.totalUsers}</li>
-            <li>Total Courses: {stats.totalCourses}</li>
-            <li>Total Feedback: {stats.totalFeedback}</li>
-            <li>Top Platforms: {stats.platformStats?.join(", ")}</li>
-          </ul>
+      <div className="d-flex align-items-start mb-4">
+        <div className="me-4">
+          <div
+            style={{
+              backgroundImage: `url(${profileImageUrl || defaultProfile})`,
+              width: "240px",
+              height: "240px",
+              borderRadius: "50%",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              border: "3px solid #6c757d",
+              boxShadow: "0 0 4px rgba(0,0,0,0.2)",
+            }}
+          />
+          <div>
+            <span
+              className="text-primary"
+              style={{ cursor: "pointer", textDecoration: "underline",paddingLeft: "75px" }}
+              onClick={triggerFileInput}
+            >
+              Change Photo
+            </span>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png, image/jpeg"
+              onChange={handlePhotoUpload}
+              style={{ display: "none" }}
+            />
+          </div>
         </div>
-      )}
+        <div>
+          <h2 style={headingStyle}>Admin Dashboard</h2>
+          {error && <p className="text-danger">{error}</p>}
+          {stats && (
+            <div className="mb-4">
+              <h5 style={headingStyle}>Summary</h5>
+              <ul>
+                <li>Admin Name: {stats.adminName}</li>
+                <li>Admin Email: {stats.adminEmail}</li>
+                <li>Total Users: {stats.totalUsers}</li>
+                <li>Total Courses: {stats.totalCourses}</li>
+                <li>Total Feedback: {stats.totalFeedback}</li>
+                <li>Top Platforms: {stats.platformStats?.join(", ")}</li>
+              </ul>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {stats?.platformDistribution && (
+  <div className="mb-5 mt-4 d-flex">
+    <div style={{ flex: 1 }}>
+      <h5 style={headingStyle}>Platform Distribution (Courses)</h5>
+      <ResponsiveContainer width="100%" height={300}>
+        <BarChart
+          data={Object.entries(stats.platformDistribution).map(([platform, count]) => ({
+            platform,
+            count,
+          }))}
+          margin={{ top: 10, right: 30, left: 0, bottom: 5 }}
+        >
+          <defs>
+            {barColors.map((color, index) => (
+              <linearGradient key={index} id={`barGradient-${index}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={color} stopOpacity={0.8} />
+                <stop offset="95%" stopColor={color} stopOpacity={0.3} />
+              </linearGradient>
+            ))}
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="platform" />
+          <YAxis allowDecimals={false} />
+          <Tooltip />
+          <Bar dataKey="count">
+            {Object.entries(stats.platformDistribution).map(([platform], index) => (
+              <Cell
+                key={`cell-${index}`}
+                fill={`url(#barGradient-${index % barColors.length})`}
+                stroke="#4b3621"
+                strokeWidth={1}
+              />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+    <div style={{ marginLeft: "2rem", minWidth: "150px" }}>
+      <h6 style={headingStyle}>Legend</h6>
+      <ul style={{ listStyleType: "none", padding: 0 }}>
+        {Object.entries(stats.platformDistribution).map(([platform], index) => (
+          <li key={index}>
+            <span
+              style={{
+                display: "inline-block",
+                width: "12px",
+                height: "12px",
+                backgroundColor: barColors[index % barColors.length],
+                marginRight: "8px",
+              }}
+            />
+            {platform}
+          </li>
+        ))}
+      </ul>
+    </div>
+  </div>
+)}
+
+
+{stats?.interestAreaPopularity && (
+  <div className="mb-5 d-flex">
+    <div style={{ flex: 1 }}>
+      <h5 style={headingStyle}>Interest Area Popularity (Users)</h5>
+      <ResponsiveContainer width="100%" height={300}>
+        <PieChart>
+          <Pie
+            data={Object.entries(stats.interestAreaPopularity).map(([name, value]) => ({
+              name,
+              value,
+            }))}
+            cx="50%"
+            cy="50%"
+            innerRadius={60}
+            outerRadius={100}
+            paddingAngle={5}
+            dataKey="value"
+            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
+          >
+            {Object.entries(stats.interestAreaPopularity).map(([_, __], index) => (
+              <Cell
+                key={`cell-${index}`}
+                fill={pieColors[index % pieColors.length]}
+              />
+            ))}
+          </Pie>
+          <Tooltip />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+    <div style={{ marginLeft: "2rem", minWidth: "150px" }}>
+      <h6 style={headingStyle}>Legend</h6>
+      <ul style={{ listStyleType: "none", padding: 0 }}>
+        {Object.entries(stats.interestAreaPopularity).map(([tag], index) => (
+          <li key={index}>
+            <span
+              style={{
+                display: "inline-block",
+                width: "12px",
+                height: "12px",
+                backgroundColor: pieColors[index % pieColors.length],
+                marginRight: "8px",
+              }}
+            />
+            {tag}
+          </li>
+        ))}
+      </ul>
+    </div>
+  </div>
+)}
+
 
       <div className="mb-4">
         <h5 style={headingStyle}>Add New Course</h5>

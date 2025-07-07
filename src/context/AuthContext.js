@@ -1,44 +1,51 @@
-  import React, { createContext, useContext, useState, useEffect } from "react";
-  import { isTokenExpired } from "../utils/checkToken"; // ✅ make sure this is valid
+// src/context/AuthContext.js
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { isTokenExpired } from "../utils/checkToken";
 
-  const AuthContext = createContext();
+const AuthContext = createContext();
 
-  export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => useContext(AuthContext);
 
-  export function AuthProvider({ children }) {
-    const [user, setUser] = useState(null);
-    const [role, setRole] = useState(null);
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [role, setRole] = useState(null);
+  const [token, setToken] = useState(null); // ✅ Store token in state
 
-    useEffect(() => {
-      const token = localStorage.getItem("token");
-      const userEmail = localStorage.getItem("email");
-      const savedRole = localStorage.getItem("role");
+  useEffect(() => {
+    const savedToken = localStorage.getItem("token");
+    const userEmail = localStorage.getItem("email");
+    const savedRole = localStorage.getItem("role");
 
-      // ✅ Check if token exists and is not expired
-      if (token && userEmail && savedRole && !isTokenExpired()) {
-        setUser({ email: userEmail });
-        setRole(savedRole);
-      } else {
-        localStorage.clear();
-      }
-    }, []);
+    if (savedToken && userEmail && savedRole && !isTokenExpired()) {
+      setToken(savedToken);
+      setUser({ email: userEmail });
+      setRole(savedRole);
+    } else {
+      localStorage.clear();
+    }
+  }, []);
 
-    const login = (userData, role) => {
-      localStorage.setItem("userId", userData.userId);
-      setUser(userData);
-      setRole(role);
-      localStorage.setItem("email", userData.email);
-    };
+  const login = (userData, role, tokenFromServer) => {
+    localStorage.setItem("userId", userData.userId);
+    localStorage.setItem("email", userData.email);
+    localStorage.setItem("role", role);
+    localStorage.setItem("token", tokenFromServer); // ✅ Save token from server
 
-    const logout = () => {
-      setUser(null);
-      setRole(null);
-      localStorage.clear(); // clears token, userId, role etc
-    };
+    setUser(userData);
+    setRole(role);
+    setToken(tokenFromServer); // ✅ Update state
+  };
 
-    return (
-      <AuthContext.Provider value={{ user, role, login, logout }}>
-        {children}
-      </AuthContext.Provider>
-    );
-  }
+  const logout = () => {
+    setUser(null);
+    setRole(null);
+    setToken(null);
+    localStorage.clear();
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, role, token, login, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}

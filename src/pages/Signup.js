@@ -1,4 +1,3 @@
-// src/pages/Signup.js
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Container, Form, Button, Card, Alert } from "react-bootstrap";
@@ -29,7 +28,14 @@ export default function Signup() {
 
     } catch (err) {
       console.error("Signup error:", err.response?.data);
-      setError(err.response?.data?.message || "Signup failed");
+      const rawMsg = err.response?.data?.message || "";
+      if (rawMsg.includes("password") && rawMsg.includes("Pattern")) {
+        setError(
+          "Password must be at least 8 characters and include uppercase, lowercase, number, and special character."
+        );
+      } else {
+        setError(rawMsg || "Signup failed");
+      }
     }
   };
 

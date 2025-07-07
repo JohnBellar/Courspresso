@@ -1,12 +1,24 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "../utils/axiosConfig";
+import Chatbot from "../components/Chatbot";
+
+// Style object for cards
+const cardStyle = {
+  backgroundColor: "#fffaf3",
+  border: "1px solid #e0d7c6",
+  borderRadius: "12px",
+  transition: "transform 0.3s, box-shadow 0.3s",
+  cursor: "pointer",
+};
 
 export default function Home() {
   const [courses, setCourses] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [error, setError] = useState("");
   const [savedCourseIds, setSavedCourseIds] = useState(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
+  const coursesPerPage = 15;
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -16,10 +28,8 @@ export default function Home() {
 
   const fetchCourses = async () => {
     try {
-      const res = await axios.get("http://localhost:8080/courses?page=0&size=20");
-      const data = Array.isArray(res.data)
-        ? res.data
-        : res.data.content || [];
+      const res = await axios.get("http://localhost:8080/courses?page=0&size=200");
+      const data = Array.isArray(res.data) ? res.data : res.data.content || [];
       setCourses(data);
     } catch (err) {
       console.error("Failed to load courses:", err);
@@ -46,18 +56,16 @@ export default function Home() {
   const handleSearch = async () => {
     try {
       if (!searchQuery.trim()) {
-        fetchCourses(); // auto load all if cleared
+        fetchCourses();
         return;
       }
 
       const res = await axios.get(`http://localhost:8080/courses/search?q=${searchQuery}`);
-      const data = Array.isArray(res.data)
-        ? res.data
-        : res.data.content || [];
-
+      const data = Array.isArray(res.data) ? res.data : res.data.content || [];
       setCourses(data);
+      setCurrentPage(1);
     } catch (err) {
-      setError("Search failed. Try again.");
+      setError("Login/Signup to search courses");
     }
   };
 
@@ -86,8 +94,61 @@ export default function Home() {
     }
   };
 
+  const unsaveCourse = async (courseId) => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      await axios.delete(`/saved-courses/${courseId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const updated = new Set(savedCourseIds);
+      updated.delete(courseId);
+      setSavedCourseIds(updated);
+    } catch (err) {
+      console.warn("Failed to unsave course");
+    }
+  };
+
+  // Pagination logic
+  const totalPages = Math.ceil(courses.length / coursesPerPage);
+  const startIndex = (currentPage - 1) * coursesPerPage;
+  const currentCourses = courses.slice(startIndex, startIndex + coursesPerPage);
+
+  const generatePageNumbers = () => {
+    const pageNumbers = [];
+
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
+    } else {
+      pageNumbers.push(1);
+
+      if (currentPage > 4) pageNumbers.push("...");
+
+      for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+        pageNumbers.push(i);
+      }
+
+      if (currentPage < totalPages - 3) pageNumbers.push("...");
+
+      pageNumbers.push(totalPages);
+    }
+
+    return pageNumbers;
+  };
+
   return (
-    <div style={{ backgroundColor: "#f6f1e7", minHeight: "100vh", paddingTop: "2rem", fontFamily: "Georgia, serif", color: "#4b3621" }}>
+    <div
+      style={{
+        backgroundColor: "#f6f1e7",
+        minHeight: "100vh",
+        paddingTop: "2rem",
+        fontFamily: "Georgia, serif",
+        color: "#4b3621",
+        position: "relative",
+      }}
+    >
       <div className="container">
         <h2 style={{ color: "#6f4e37", textAlign: "center" }}>
           Brew your perfect course — <em>Your daily dose of curated learning</em> ☕
@@ -104,7 +165,7 @@ export default function Home() {
             onChange={(e) => {
               const value = e.target.value;
               setSearchQuery(value);
-              if (value === "") fetchCourses(); // auto-load when cleared
+              if (value === "") fetchCourses();
             }}
           />
           <button className="btn btn-outline-dark" onClick={handleSearch}>
@@ -137,48 +198,110 @@ export default function Home() {
 
         <h4 className="mt-4" style={{ color: "#6f4e37" }}>Courses</h4>
         <div className="row">
-          {courses.length === 0 ? (
+          {currentCourses.length === 0 ? (
             <p>No courses found.</p>
           ) : (
-            courses.map((c) => (
+            currentCourses.map((c) => (
               <div key={c.id} className="col-md-4">
-                <div className="card mb-4 shadow-sm" style={{ backgroundColor: "#fffaf3", border: "1px solid #e0d7c6", borderRadius: "12px" }}>
-                  <img src={c.imageUrl} className="card-img-top" alt={c.title} />
+                <div
+                  className="card mb-4 shadow-sm"
+                  style={cardStyle}
+                  onClick={() => navigate("/coursedescp", { state: { course: c } })}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "scale(1.03)";
+                    e.currentTarget.style.boxShadow = "0 8px 20px rgba(0, 0, 0, 0.2)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "scale(1)";
+                    e.currentTarget.style.boxShadow = "0 4px 10px rgba(0, 0, 0, 0.1)";
+                  }}
+                >
+                  <img
+  src={c.imageUrl}
+  className="card-img-top"
+  alt={c.title}
+  style={{
+    height: "200px",
+    width: "100%",
+    objectFit: "contain",
+    backgroundColor: "#fff", // optional: gives a clean background
+    borderTopLeftRadius: "12px",
+    borderTopRightRadius: "12px",
+  }}
+/>
+
                   <div className="card-body">
                     <h5 className="card-title">{c.title}</h5>
                     <p className="card-text">{c.description}</p>
                     <div className="d-flex flex-column gap-2">
-  <div className="d-flex justify-content-between">
-    <a
-      href={c.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="btn btn-outline-dark"
-    >
-      Visit Course
-    </a>
-    <button
-      className="btn btn-outline-success"
-      onClick={() => saveCourse(c.id)}
-      disabled={savedCourseIds.has(c.id)}
-    >
-      {savedCourseIds.has(c.id) ? "Saved" : "Save"}
-    </button>
-  </div>
-  <button
-    className="btn btn-outline-secondary"
-    onClick={() => {
-      const shareUrl = `http://localhost:8080/courses/share/${c.id}`;
-      window.open(shareUrl, "_blank");
-    }}
-  >
-    📤 Share
-  </button>
-</div>
+                      <div className="d-flex justify-content-between">
+                        <a
+                          href={c.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-outline-dark"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Visit Course
+                        </a>
+
+                        {savedCourseIds.has(c.id) ? (
+                          <button
+                            className="btn btn-outline-danger"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              unsaveCourse(c.id);
+                            }}
+                          >
+                            Unsave
+                          </button>
+                        ) : (
+                          <button
+                            className="btn btn-outline-success"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              saveCourse(c.id);
+                            }}
+                          >
+                            Save
+                          </button>
+                        )}
+                      </div>
+                      <button
+  className="btn btn-outline-secondary"
+  onClick={(e) => {
+    e.stopPropagation();
+    const shareUrl = `${window.location.origin}/coursedescp/${c.id}`;
+    navigator.clipboard.writeText(shareUrl)
+      .then(() => alert("Link copied to clipboard!"))
+      .catch(() => alert("Failed to copy link."));
+  }}
+>
+  📤 Share
+</button>
+
+                    </div>
                   </div>
                 </div>
               </div>
             ))
+          )}
+        </div>
+
+        {/* Pagination Bar */}
+        <div className="d-flex justify-content-center mt-4 mb-5 flex-wrap gap-2">
+          {generatePageNumbers().map((page, index) =>
+            page === "..." ? (
+              <span key={index} className="px-2 fw-bold">...</span>
+            ) : (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                className={`btn ${page === currentPage ? "btn-dark" : "btn-outline-dark"}`}
+              >
+                {page}
+              </button>
+            )
           )}
         </div>
       </div>

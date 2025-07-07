@@ -1,57 +1,63 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Container, Card, Form, Button, Alert } from "react-bootstrap";
+import { useNavigate } from "react-router-dom";
 import coffeebgImage from "../assets/coffee-feedback-bg.png";
 
 export default function Feedback() {
-  const [formData, setFormData] = useState({
-    recommendationRating: "",
-    relevance: "",
-    enrolled: "",
-    courseQualityRating: "",
-    suggestions: "",
-    uiExperience: "",
-  });
-
+  const navigate = useNavigate();
+  const [currentStep, setCurrentStep] = useState(0);
   const [submitted, setSubmitted] = useState(false);
+  const [recommendedCourses, setRecommendedCourses] = useState([]);
+  const [feedbacks, setFeedbacks] = useState([]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("recommendedCourses");
+    if (stored) {
+      const courses = JSON.parse(stored);
+      setRecommendedCourses(courses);
+      setFeedbacks(courses.map(() => ({ rating: "", comments: "", enrolled: false })));
+    }
+  }, []);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value, type, checked } = e.target;
+    const updated = [...feedbacks];
+    updated[currentStep][name] = type === "checkbox" ? checked : value;
+    setFeedbacks(updated);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleNext = () => {
+    if (!feedbacks[currentStep].rating) {
+      alert("Please provide a rating before continuing.");
+      return;
+    }
+    setCurrentStep((prev) => prev + 1);
+  };
 
+  const handleSubmit = async () => {
     const userId = localStorage.getItem("userId");
+    const token = localStorage.getItem("token");
 
     const payload = {
-      userId: userId,
-      recommendationRating: parseInt(formData.recommendationRating),
-      relevance:
-        formData.relevance === "very"
-          ? "Very relevant"
-          : formData.relevance === "somewhat"
-          ? "Somewhat relevant"
-          : "Not relevant",
-      enrolled: formData.enrolled === "yes",
-      courseQualityRating:
-        formData.enrolled === "yes"
-          ? parseInt(formData.courseQualityRating)
-          : null,
-      feedback: formData.suggestions,
-      appExperience: formData.uiExperience,
+      courseFeedbacks: recommendedCourses.map((course, index) => ({
+        courseId: course.id,
+        rating: parseInt(feedbacks[index].rating),
+        enrolled: feedbacks[index].enrolled,
+        comments: feedbacks[index].comments || "",
+      })),
     };
 
     try {
-      const res = await fetch("/feedback", {
+      const res = await fetch("http://localhost:8080/feedback", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
       });
 
       if (res.ok) {
-        console.log("Feedback submitted:", payload);
         setSubmitted(true);
       } else {
         console.error("Failed to submit feedback");
@@ -61,8 +67,24 @@ export default function Feedback() {
     }
   };
 
+  useEffect(() => {
+    if (submitted) {
+      const timer = setTimeout(() => navigate("/"), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [submitted, navigate]);
+
+  if (recommendedCourses.length === 0) {
+    return (
+      <div className="text-center mt-5">
+        <h4>No recommended courses found.</h4>
+        <p>Please complete the quiz first.</p>
+      </div>
+    );
+  }
+
   const backgroundStyle = {
-    backgroundImage: `url("${coffeebgImage}")`,
+    backgroundImage: `url(${coffeebgImage})`,
     backgroundSize: "cover",
     backgroundPosition: "center",
     minHeight: "100vh",
@@ -97,17 +119,22 @@ export default function Feedback() {
 
             {submitted ? (
               <Alert variant="success" className="text-center fw-semibold">
-                Thank you for your feedback, Jinnie! 💙
+                Thank you for your feedback <br />
+                Redirecting you home... 🏠
               </Alert>
             ) : (
-              <Form onSubmit={handleSubmit}>
+              <Form>
+                <h5 className="mb-3 text-center">
+                  {recommendedCourses[currentStep].title}
+                </h5>
+
                 <Form.Group className="mb-3">
                   <Form.Label style={labelStyle}>
-                    1. How satisfied are you with the recommendations?
+                    1. How would you rate this recommendation?
                   </Form.Label>
                   <Form.Select
-                    name="recommendationRating"
-                    value={formData.recommendationRating}
+                    name="rating"
+                    value={feedbacks[currentStep].rating}
                     onChange={handleChange}
                     required
                   >
@@ -121,111 +148,39 @@ export default function Feedback() {
                 </Form.Group>
 
                 <Form.Group className="mb-3">
-                  <Form.Label style={labelStyle}>
-                    2. Was the recommended course relevant to your interests?
-                  </Form.Label>
                   <Form.Check
-                    type="radio"
-                    label="Very relevant"
-                    name="relevance"
-                    value="very"
-                    onChange={handleChange}
-                    required
-                  />
-                  <Form.Check
-                    type="radio"
-                    label="Somewhat relevant"
-                    name="relevance"
-                    value="somewhat"
-                    onChange={handleChange}
-                  />
-                  <Form.Check
-                    type="radio"
-                    label="Not relevant"
-                    name="relevance"
-                    value="not"
-                    onChange={handleChange}
-                  />
-                </Form.Group>
-
-                <Form.Group className="mb-3">
-                  <Form.Label style={labelStyle}>
-                    3. Did you enroll in any of the recommended courses?
-                  </Form.Label>
-                  <Form.Check
-                    type="radio"
-                    label="Yes"
+                    type="checkbox"
+                    label="I have enrolled in this course"
                     name="enrolled"
-                    value="yes"
-                    onChange={handleChange}
-                    required
-                  />
-                  <Form.Check
-                    type="radio"
-                    label="No"
-                    name="enrolled"
-                    value="no"
-                    onChange={handleChange}
-                  />
-                </Form.Group>
-
-                {formData.enrolled === "yes" && (
-                  <Form.Group className="mb-3">
-                    <Form.Label style={labelStyle}>
-                      4. How would you rate the course you chose?
-                    </Form.Label>
-                    <Form.Select
-                      name="courseQualityRating"
-                      value={formData.courseQualityRating}
-                      onChange={handleChange}
-                      required
-                    >
-                      <option value="">-- Select rating --</option>
-                      <option value="5">⭐ 5 - Excellent</option>
-                      <option value="4">⭐ 4 - Good</option>
-                      <option value="3">⭐ 3 - Average</option>
-                      <option value="2">⭐ 2 - Below Avg</option>
-                      <option value="1">⭐ 1 - Poor</option>
-                    </Form.Select>
-                  </Form.Group>
-                )}
-
-                <Form.Group className="mb-3">
-                  <Form.Label style={labelStyle}>
-                    5. What can we do to improve our recommendations?
-                  </Form.Label>
-                  <Form.Control
-                    as="textarea"
-                    name="suggestions"
-                    rows={3}
-                    placeholder="Your feedback means the world 💙"
-                    value={formData.suggestions}
+                    checked={feedbacks[currentStep].enrolled}
                     onChange={handleChange}
                   />
                 </Form.Group>
 
                 <Form.Group className="mb-4">
                   <Form.Label style={labelStyle}>
-                    6. How was your experience using Courspresso?
+                    2. Any additional comments? (Optional)
                   </Form.Label>
-                  <Form.Select
-                    name="uiExperience"
-                    value={formData.uiExperience}
+                  <Form.Control
+                    as="textarea"
+                    name="comments"
+                    rows={3}
+                    value={feedbacks[currentStep].comments}
                     onChange={handleChange}
-                    required
-                  >
-                    <option value="">-- Choose one --</option>
-                    <option value="awesome">Awesome</option>
-                    <option value="good">Good</option>
-                    <option value="okay">Okay</option>
-                    <option value="meh">Needs improvement</option>
-                  </Form.Select>
+                    placeholder="Your thoughts ☕"
+                  />
                 </Form.Group>
 
                 <div className="text-center">
-                  <Button type="submit" variant="dark">
-                    Submit Feedback 💌
-                  </Button>
+                  {currentStep < recommendedCourses.length - 1 ? (
+                    <Button variant="dark" onClick={handleNext}>
+                      Next ➡
+                    </Button>
+                  ) : (
+                    <Button variant="dark" onClick={handleSubmit}>
+                      Submit Feedback 💌
+                    </Button>
+                  )}
                 </div>
               </Form>
             )}

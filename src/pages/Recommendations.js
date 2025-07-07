@@ -1,213 +1,210 @@
-import React, { useEffect, useState } from "react";
-import { Container, Row, Col, Form, Card, Button, Spinner } from "react-bootstrap";
-import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useRef, useState } from "react";
 import axios from "../utils/axiosConfig";
-import { saveCourse } from "../utils/courseStorage";
-import "./Recommendations.css";
+import { Card, Button } from "react-bootstrap";
+import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 export default function Recommendations() {
+  const [recommendations, setRecommendations] = useState([]);
+  const [error, setError] = useState(null);
+  const [savedCourseIds, setSavedCourseIds] = useState(new Set());
+  const hasFetched = useRef(false);
+  const { token } = useAuth();
   const navigate = useNavigate();
-  const [courses, setCourses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [platformFilter, setPlatformFilter] = useState("");
-  const [difficultyFilter, setDifficultyFilter] = useState("");
+
+  const fetchRecommendations = async () => {
+    const payload = JSON.parse(localStorage.getItem("quizPayload"));
+    if (!token || !payload) {
+      setError("Missing data. Please complete the quiz or login.");
+      return;
+    }
+
+    try {
+      const response = await axios.post(
+        "/courses/filter",
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      setRecommendations(response.data);
+      localStorage.setItem("recommendedCourses", JSON.stringify(response.data));
+    } catch (err) {
+      console.error("Error fetching recommendations:", err);
+      setError("Failed to load recommendations.");
+    }
+  };
+
+  const checkSavedCourses = async () => {
+    try {
+      const res = await axios.get("/saved-courses", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const saved = res.data || [];
+      const savedIds = new Set(saved.map((c) => c.courseId));
+      setSavedCourseIds(savedIds);
+    } catch (err) {
+      console.warn("Could not fetch saved courses.");
+    }
+  };
+
+  const saveCourse = async (courseId) => {
+    const userId = localStorage.getItem("userId");
+    if (!userId || !token) return alert("Please login to save courses.");
+
+    if (savedCourseIds.has(courseId)) {
+      alert("Course already saved.");
+      return;
+    }
+
+    try {
+      await axios.post(`/saved-courses?courseId=${courseId}`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setSavedCourseIds((prev) => new Set(prev).add(courseId));
+      alert("Course saved!");
+    } catch (err) {
+      console.error("Failed to save course", err);
+      alert("Failed to save course.");
+    }
+  };
+
+  const unsaveCourse = async (courseId) => {
+    try {
+      await axios.delete(`/saved-courses/${courseId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const updated = new Set(savedCourseIds);
+      updated.delete(courseId);
+      setSavedCourseIds(updated);
+    } catch (err) {
+      console.error("Failed to unsave course", err);
+    }
+  };
 
   useEffect(() => {
-    const fetchRecommendations = async () => {
-      try {
-        const quizData = JSON.parse(localStorage.getItem("quizAnswers"));
-        if (!quizData) {
-          alert("No quiz answers found. Please take the quiz.");
-          navigate("/quiz");
-          return;
-        }
+    if (!hasFetched.current) {
+      hasFetched.current = true;
+      fetchRecommendations();
+      checkSavedCourses();
+    }
+  }, [token]);
 
-        const payload = {
-          tags: [quizData.interest],
-          platforms: [quizData.preferredPlatform],
-          difficulty: quizData.difficulty.toUpperCase(),
-          duration: mapCourseLengthToEnum(quizData.courseLength),
-        };
-
-        const response = await axios.post("/courses/filter", payload);
-        setCourses(response.data);
-      } catch (err) {
-        console.error("Failed to fetch courses:", err);
-        alert("Failed to load course recommendations.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRecommendations();
-  }, [navigate]);
-
-  const mapCourseLengthToEnum = (length) => {
-    if (length === "short") return "ONE_TO_FOUR_WEEKS";
-    if (length === "medium") return "FOUR_TO_EIGHT_WEEKS";
-    return "EIGHT_PLUS_WEEKS";
+  const handleGiveFeedback = () => {
+    navigate("/feedback");
   };
-
-  const filteredCourses = courses.filter(course => {
-    const platformMatch = platformFilter ? course.platform === platformFilter : true;
-    const difficultyMatch = difficultyFilter ? course.difficulty === difficultyFilter : true;
-    return platformMatch && difficultyMatch;
-  });
-
-  const downloadCourses = (courses) => {
-    const header = "Title,Platform,Duration,Difficulty,Tags\n";
-    const content = courses.map(course =>
-      "${course.title}","${course.platform}","${course.duration}","${course.difficulty}","${course.tags.join(" | ")}"
-    ).join("\n");
-
-    const blob = new Blob([header + content], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "recommended_courses.csv";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  if (loading) {
-    return (
-      <Container
-        className="text-center mt-5"
-        style={{
-          backgroundImage: 'url("/assets/coffee-recommendation-bg.jpg")',
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          minHeight: "100vh",
-          color: "#4b3621",
-          fontFamily: "Georgia, serif"
-        }}
-      >
-        <Spinner animation="border" variant="dark" />
-        <p>Loading recommendations...</p>
-      </Container>
-    );
-  }
 
   return (
-    <Container
-      className="mt-5 recommendations"
+    <div
       style={{
-        backgroundImage: 'url("/assets/coffee-recommendation-bg.jpg")',
-        backgroundSize: "cover",
-        backgroundPosition: "center",
+        backgroundColor: "#f6f1e7",
         minHeight: "100vh",
-        paddingBottom: "5rem",
+        paddingTop: "2rem",
+        fontFamily: "Georgia, serif",
         color: "#4b3621",
-        fontFamily: "Georgia, serif"
       }}
     >
-      <h2 className="text-center mb-4" style={{ color: "#6f4e37" }}>
-        🎯 Recommended Courses
-      </h2>
+      <div className="container">
+        <h2 style={{ color: "#6f4e37", textAlign: "center" }}>
+          Recommended Courses for You ☕
+        </h2>
 
-      <Row className="mb-4">
-        <Col md={6}>
-          <Form.Select
-            value={platformFilter}
-            onChange={(e) => setPlatformFilter(e.target.value)}
-            style={{ backgroundColor: "#f8f1e7", borderColor: "#6f4e37", color: "#4b3621" }}
-          >
-            <option value="">Filter by Platform</option>
-            <option value="Coursera">Coursera</option>
-            <option value="Udemy">Udemy</option>
-            <option value="edX">edX</option>
-            <option value="Infosys Springboard">Infosys Springboard</option>
-          </Form.Select>
-        </Col>
-        <Col md={6}>
-          <Form.Select
-            value={difficultyFilter}
-            onChange={(e) => setDifficultyFilter(e.target.value)}
-            style={{ backgroundColor: "#f8f1e7", borderColor: "#6f4e37", color: "#4b3621" }}
-          >
-            <option value="">Filter by Difficulty</option>
-            <option value="Beginner">Beginner</option>
-            <option value="Intermediate">Intermediate</option>
-            <option value="Advanced">Advanced</option>
-          </Form.Select>
-        </Col>
-      </Row>
+        {error && <p className="text-danger text-center">{error}</p>}
 
-      <Row>
-        {filteredCourses.map((course, index) => (
-          <Col md={6} lg={4} key={index} className="mb-4">
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-            >
-              <Card
-                className="course-card h-100"
-                style={{
-                  backgroundColor: "#f8f1e7",
-                  color: "#4b3621",
-                  border: "1px solid #6f4e37",
-                  borderRadius: "12px",
-                  boxShadow: "0 4px 10px rgba(0, 0, 0, 0.15)"
-                }}
-              >
-                <Card.Body>
-                  <Card.Title>{course.title}</Card.Title>
-                  <Card.Subtitle className="mb-2 text-muted">
-                    {course.platform} • {course.duration}
-                  </Card.Subtitle>
-                  <Card.Text>
-                    <strong>Difficulty:</strong> {course.difficulty}
-                    <br />
-                    <strong>Tags:</strong> {course.tags.join(", ")}
-                  </Card.Text>
-                  <div className="d-flex justify-content-between">
-                    <Button variant="dark" href={course.link} target="_blank">
-                      Enroll Now
-                    </Button>
-                    <Button
-                      variant="outline-dark"
-                      onClick={() => {
-                        saveCourse(course);
-                        alert("💾 Saved to your profile!");
-                      }}
-                    >
-                      💾 Save
-                    </Button>
-                  </div>
-                </Card.Body>
-              </Card>
-            </motion.div>
-          </Col>
-        ))}
-      </Row>
+        <div className="row mt-4">
+          {recommendations.length === 0 ? (
+            <p className="text-center">No recommendations available.</p>
+          ) : (
+            recommendations.map((course) => (
+              <div key={course.id} className="col-md-4">
+                <Card
+                  className="mb-4 shadow-sm"
+                  style={{
+                    backgroundColor: "#fffaf3",
+                    border: "1px solid #e0d7c6",
+                    borderRadius: "12px",
+                  }}
+                >
+                  {course.imageUrl && (
+                    <Card.Img
+                      variant="top"
+                      src={course.imageUrl}
+                      alt={course.title}
+                    />
+                  )}
+                  <Card.Body>
+                    <Card.Title>{course.title}</Card.Title>
+                    <Card.Text>{course.description}</Card.Text>
+                    <p>
+                      <strong>Platform:</strong> {course.platform}
+                    </p>
+                    <p>
+                      <strong>Duration:</strong> {course.duration}
+                    </p>
 
-      {filteredCourses.length > 0 && (
-        <div className="text-center mt-5 d-flex flex-wrap justify-content-center gap-3">
-          <Button
-            variant="outline-dark"
-            size="lg"
-            onClick={() => navigate("/feedback")}
-          >
-            💬 Give Feedback
-          </Button>
-          <Button
-            variant="dark"
-            size="lg"
-            onClick={() => navigate("/quiz")}
-          >
-            🔁 Retake Quiz
-          </Button>
-          <Button
-            variant="outline-secondary"
-            size="lg"
-            onClick={() => downloadCourses(filteredCourses)}
-          >
-            📄 Download CSV
-          </Button>
+                    <div className="d-flex flex-column gap-2 mt-3">
+                      <div className="d-flex justify-content-between">
+                        <a
+                          href={course.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-outline-dark"
+                        >
+                          Visit Course
+                        </a>
+
+                        {savedCourseIds.has(course.id) ? (
+                          <button
+                            className="btn btn-outline-danger"
+                            onClick={() => unsaveCourse(course.id)}
+                          >
+                            Unsave
+                          </button>
+                        ) : (
+                          <button
+                            className="btn btn-outline-success"
+                            onClick={() => saveCourse(course.id)}
+                          >
+                            Save
+                          </button>
+                        )}
+                      </div>
+
+                      <Button
+                        variant="outline-secondary"
+                        onClick={() => {
+                          const shareUrl = `http://localhost:8080/courses/share/${course.id}`;
+                          window.open(shareUrl, "_blank");
+                        }}
+                      >
+                        📤 Share
+                      </Button>
+                    </div>
+                  </Card.Body>
+                </Card>
+              </div>
+            ))
+          )}
         </div>
-      )}
-    </Container>
+
+        {recommendations.length > 0 && (
+          <div className="text-center mt-4">
+            <Button
+              style={{
+                backgroundColor: "#6f4e37",
+                border: "none",
+                fontFamily: "Georgia, serif",
+              }}
+              onClick={handleGiveFeedback}
+            >
+              Give Feedback
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
