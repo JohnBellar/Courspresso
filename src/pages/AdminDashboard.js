@@ -269,8 +269,6 @@ export default function AdminDashboard() {
                 <li>Admin Email: {stats.adminEmail}</li>
                 <li>Total Users: {stats.totalUsers}</li>
                 <li>Total Courses: {stats.totalCourses}</li>
-                <li>Total Feedback: {stats.totalFeedback}</li>
-                <li>Top Platforms: {stats.platformStats?.join(", ")}</li>
               </ul>
             </div>
           )}
