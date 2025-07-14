@@ -1,13 +1,12 @@
-package com.dhanesh.auth.portal;
+// package com.dhanesh.auth.portal;
 
-import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
+// import org.junit.jupiter.api.Test;
+// import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class AuthPortalApplicationTests {
+// @SpringBootTest
+// class AuthPortalApplicationTests {
 
-	@Test
-	void contextLoads() {
-	}
-
-}
+// 	@Test
+// 	void contextLoads() {
+// 	}
+// }

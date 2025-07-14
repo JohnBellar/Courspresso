@@ -12,6 +12,14 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import com.dhanesh.auth.portal.security.jwt.JwtAuthenticationFilter;
 import com.dhanesh.auth.portal.security.jwt.JwtService;
 import lombok.RequiredArgsConstructor;
+
+/**
+ * Application-level Spring Configuration for authentication-related beans,
+ * such as AuthenticationManager, PasswordEncoder, JWT filter, etc.
+ * 
+ * All security dependencies are centrally configured here.
+ */
+
 @Configuration
 @RequiredArgsConstructor
 public class AppConfig {
@@ -33,7 +41,6 @@ public class AppConfig {
      * and the defined PasswordEncoder for authentication logic.
      */
     @Bean 
-    @SuppressWarnings("deprecation") // To avoid warning for DaoAuthenticationProvider (safe to suppress here)
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
         provider.setPasswordEncoder(passwordEncoder());
@@ -58,4 +65,4 @@ public class AppConfig {
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
         return new JwtAuthenticationFilter(jwtService, userDetailsService);
     } 
-}
+ }
