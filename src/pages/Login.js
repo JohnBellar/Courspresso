@@ -1,4 +1,4 @@
-// src/pages/Login.js
+// src/pages/Login.js (updated)
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Form, Button, Card, Alert } from "react-bootstrap";
@@ -54,21 +54,7 @@ export default function Login() {
       }
     } catch (err) {
       const msg = err.response?.data?.message || "Invalid credentials";
-      if (msg.toLowerCase().includes("not verified")) {
-        alert("🔁 Email not verified. Sending OTP again...");
-        try {
-          await axios.post("/api/auth/request-otp", {
-            email,
-            purpose: "VERIFICATION",
-          });
-          navigate("/verify-otp", { state: { email, purpose: "VERIFICATION" } });
-        } catch (otpErr) {
-          console.error("Failed to resend OTP:", otpErr);
-          setError("Failed to resend OTP. Please try again.");
-        }
-      } else {
-        setError(msg);
-      }
+      setError(msg);
     }
   };
 

@@ -1,3 +1,4 @@
+// src/pages/Signup.js
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Container, Form, Button, Card, Alert } from "react-bootstrap";
@@ -24,11 +25,13 @@ export default function Signup() {
         authProvider: "local"
       });
 
+      alert(res.data.message || "OTP sent successfully");
       navigate("/verify-otp", { state: { email } });
 
     } catch (err) {
-      console.error("Signup error:", err.response?.data);
       const rawMsg = err.response?.data?.message || "";
+      console.error("Signup error:", rawMsg);
+      
       if (rawMsg.includes("password") && rawMsg.includes("Pattern")) {
         setError(
           "Password must be at least 8 characters and include uppercase, lowercase, number, and special character."

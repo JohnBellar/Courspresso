@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import axios from "../utils/axiosConfig";
 import { useNavigate } from "react-router-dom";
 import refreshIcon from "../assets/refresh.jpg";
+import * as XLSX from "xlsx";
 import defaultProfile from "../assets/DefaultProfile.png";
 import {
   BarChart,
@@ -91,7 +92,7 @@ export default function AdminDashboard() {
 
   const loadCourses = async () => {
     try {
-      const res = await axios.get("/courses?page=0&size=20");
+      const res = await axios.get("/courses?page=0&size=25");
       setCourses(Array.isArray(res.data) ? res.data : res.data.content || []);
     } catch (e) {
       setError("403 - Admin access required. Please login as admin.");
@@ -168,6 +169,77 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleBulkUpload = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  try {
+    const data = await file.arrayBuffer();
+    const workbook = XLSX.read(data);
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    let json = XLSX.utils.sheet_to_json(sheet);
+
+    // Fix tags: parse strings like '["AI", "ML"]' into arrays if needed
+    json = json.map((course, index) => {
+      // Validate required fields
+      const requiredFields = [
+        "title", "description", "tags", "platform", "tutor",
+        "difficultyLevel", "duration", "rating", "language", "url", "imageUrl"
+      ];
+
+      for (const field of requiredFields) {
+        if (!course[field]) {
+          throw new Error(`Missing field "${field}" in row ${index + 2}`);
+        }
+      }
+
+      // If tags is a string, try to parse it to array
+      if (typeof course.tags === "string") {
+        try {
+          const parsed = JSON.parse(course.tags);
+          if (Array.isArray(parsed)) course.tags = parsed;
+        } catch (err) {
+          // fallback: split by comma
+          course.tags = course.tags.split(",").map(t => t.trim());
+        }
+      }
+
+      return course;
+    });
+
+    console.log("📤 Uploading parsed JSON to backend:", json);
+
+    await axios.post("/admin/courses/bulk", json);
+
+    alert("✅ Courses uploaded successfully!");
+    loadCourses();
+  } catch (err) {
+    console.error("🚨 Bulk upload failed", err);
+    alert("❌ Failed to upload bulk courses: " + (err.message || "Unknown error"));
+  }
+};
+  const downloadTemplate = () => {
+    const sample = [
+      {
+        title: "Sample Course",
+        description: "Description",
+        tags: "Put as array of tags",
+        platform: "Platform",
+        tutor: "Tutor",
+        difficultyLevel: "BEGINNER",
+        duration: "ONE_TO_FOUR_WEEKS",
+        rating: 4.5,
+        language: "English",
+        url: "https://example.com",
+        imageUrl: "https://example.com/image.png"
+      }
+    ];
+    const worksheet = XLSX.utils.json_to_sheet(sample);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Courses");
+    XLSX.writeFile(workbook, "bulk_courses_template.xlsx");
+  };
+
   const handleSearch = async (query = searchQuery, isReset = false) => {
     try {
       if (!query.trim()) {
@@ -193,13 +265,20 @@ export default function AdminDashboard() {
   };
 
   const handleUserDelete = async (username) => {
-    try {
-      await axios.delete(`/admin/users?username=${username}`);
-      loadUsers();
-    } catch {
-      alert("Failed to delete user");
-    }
-  };
+  try {
+    await axios.delete(`/admin/users?username=${username}`);
+  } catch (e) {
+    
+    return;
+  }
+
+  // Try to reload users, but silently fail if it errors
+  try {
+    await loadUsers();
+  } catch (e) {
+    console.warn("User list reload failed after deletion");
+  }
+};
 
   const filteredUsers = users.filter(u =>
     u.username.toLowerCase().includes(userSearch.toLowerCase()) ||
@@ -410,6 +489,14 @@ export default function AdminDashboard() {
         <button className="btn btn-success" onClick={addCourse}>Add Course</button>
       </div>
 
+      <div className="mb-4">
+        <h5 style={headingStyle}>📥 Bulk Course Upload</h5>
+        <div className="d-flex gap-3">
+          <input type="file" accept=".xlsx,.xls" onChange={handleBulkUpload} className="form-control" />
+          <button className="btn btn-outline-secondary" onClick={downloadTemplate}>Download Excel Template</button>
+        </div>
+      </div>
+
       <h4 style={headingStyle}>Manage Courses</h4>
       <div className="input-group mb-3">
         <input
@@ -463,7 +550,7 @@ export default function AdminDashboard() {
 </ul>
 
 
-{/* ✅ Outside of users list */}
+
 <h4 style={headingStyle}>View Course Feedback</h4>
 <div className="input-group mb-3">
   <input
