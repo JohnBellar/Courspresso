@@ -264,21 +264,27 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleUserDelete = async (username) => {
+const [deletingUser, setDeletingUser] = useState(null);
+
+const handleUserDelete = async (username) => {
+  if (deletingUser === username) return; // Prevent repeat
+  setDeletingUser(username);
+
   try {
     await axios.delete(`/admin/users?username=${username}`);
   } catch (e) {
-    
-    return;
-  }
-
-  // Try to reload users, but silently fail if it errors
-  try {
+    if (e.response?.status === 400 && e.response?.data === "User Not Found") {
+      console.warn(`User "${username}" already deleted.`);
+    } else {
+      console.error("Delete failed", e);
+      alert("Failed to delete user");
+    }
+  } finally {
+    setDeletingUser(null);
     await loadUsers();
-  } catch (e) {
-    console.warn("User list reload failed after deletion");
   }
 };
+
 
   const filteredUsers = users.filter(u =>
     u.username.toLowerCase().includes(userSearch.toLowerCase()) ||
